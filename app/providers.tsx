@@ -19,8 +19,8 @@ import {
 } from '@tanstack/react-query';
 
 const config = getDefaultConfig({
-  appName: 'My RainbowKit App',
-  projectId: 'YOUR_PROJECT_ID',
+  appName: 'Next.js PWA App',
+  projectId: '2f05ae7f1116030fde2d36508f472bfb', // Demo project ID - get your own at https://cloud.walletconnect.com
   chains: [mainnet, polygon, optimism, arbitrum, base],
   ssr: true,
 });

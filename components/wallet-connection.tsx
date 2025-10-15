@@ -1,7 +1,7 @@
 'use client';
 
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { MobileWalletHandler } from './mobile-wallet-handler';
 
 export function WalletConnection() {
-  return <ConnectButton />;
+  return <MobileWalletHandler />;
 }

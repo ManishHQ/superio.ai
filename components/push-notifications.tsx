@@ -165,8 +165,8 @@ export function PushNotifications() {
   }
 
   return (
-    <div className="space-y-4 p-4 border rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-      <h3 className="text-lg font-semibold text-blue-900">Push Notifications</h3>
+    <div className="space-y-4 p-4 sm:p-6 border rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 w-full">
+      <h3 className="text-lg sm:text-xl font-semibold text-blue-900">Push Notifications</h3>
       
       <div className="space-y-3">
         {subscription ? (
@@ -218,23 +218,24 @@ export function PushNotifications() {
                 placeholder="Enter your reminder message"
                 className="w-full p-2 border rounded text-sm"
               />
-              <div className="flex gap-2 items-center">
-                <label className="text-xs text-blue-700">Delay (seconds):</label>
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <label className="text-xs text-blue-700 shrink-0">Delay (seconds):</label>
                 <input
                   type="number"
                   value={reminderSeconds}
                   onChange={(e) => setReminderSeconds(Number(e.target.value))}
                   min="1"
                   max="3600"
-                  className="w-20 p-1 border rounded text-sm"
+                  className="w-full sm:w-20 p-1 border rounded text-sm"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
                   onClick={setReminder}
                   disabled={isLoading || !reminderMessage.trim() || reminderSeconds < 1}
                   size="sm"
                   variant="outline"
+                  className="w-full sm:w-auto"
                 >
                   {isLoading ? 'Setting...' : `Set Reminder (${reminderSeconds}s)`}
                 </Button>
@@ -244,6 +245,7 @@ export function PushNotifications() {
                     disabled={isLoading}
                     size="sm"
                     variant="destructive"
+                    className="w-full sm:w-auto"
                   >
                     Cancel ({activeReminders.length})
                   </Button>

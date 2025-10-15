@@ -48,24 +48,24 @@ export function SimpleNotifications() {
   }
 
   return (
-    <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
-      <h3 className="text-lg font-semibold">Simple Notification Test</h3>
+    <div className="space-y-4 p-4 sm:p-6 border rounded-lg bg-blue-50 w-full">
+      <h3 className="text-lg sm:text-xl font-semibold">Simple Notification Test</h3>
       
-      <div className="space-y-2">
+      <div className="space-y-3">
         <input
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder="Enter notification message"
-          className="w-full p-2 border rounded"
+          className="w-full p-2 border rounded text-sm sm:text-base"
         />
         
-        <div className="flex gap-2 flex-wrap">
-          <Button onClick={sendSimpleNotification}>
+        <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+          <Button onClick={sendSimpleNotification} className="w-full sm:w-auto">
             Send Browser Notification
           </Button>
           
-          <Button onClick={sendServiceWorkerNotification} variant="outline">
+          <Button onClick={sendServiceWorkerNotification} variant="outline" className="w-full sm:w-auto">
             Send SW Notification
           </Button>
           
@@ -73,12 +73,13 @@ export function SimpleNotifications() {
             onClick={requestPermission} 
             variant="outline"
             size="sm"
+            className="w-full sm:w-auto"
           >
             Request Permission
           </Button>
         </div>
         
-        <p className="text-sm text-gray-600">
+        <p className="text-xs sm:text-sm text-gray-600">
           Status: {hasPermission ? '✅ Permission granted' : '❌ Need permission'}
         </p>
       </div>

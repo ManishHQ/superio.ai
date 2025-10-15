@@ -19,7 +19,10 @@ export function PushNotifications() {
   const [isSupported, setIsSupported] = useState(false);
   const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   const [message, setMessage] = useState('Hello from your PWA!');
+  const [reminderMessage, setReminderMessage] = useState('Reminder: Time to check your PWA!');
+  const [reminderSeconds, setReminderSeconds] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeReminders, setActiveReminders] = useState<number[]>([]);
 
   useEffect(() => {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
@@ -115,6 +118,42 @@ export function PushNotifications() {
     }
   }
 
+  async function setReminder() {
+    try {
+      setIsLoading(true);
+      
+      const timerId = window.setTimeout(async () => {
+        try {
+          const result = await sendNotification(reminderMessage);
+          if (result.success) {
+            console.log('Reminder notification sent successfully!');
+          } else {
+            console.error('Failed to send reminder notification:', result.error);
+          }
+        } catch (error) {
+          console.error('Error sending reminder notification:', error);
+        }
+        
+        setActiveReminders(prev => prev.filter(id => id !== timerId));
+      }, reminderSeconds * 1000);
+      
+      setActiveReminders(prev => [...prev, timerId]);
+      alert(`Reminder set for ${reminderSeconds} seconds!`);
+      
+    } catch (error) {
+      console.error('Error setting reminder:', error);
+      alert('Failed to set reminder');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function cancelAllReminders() {
+    activeReminders.forEach(timerId => clearTimeout(timerId));
+    setActiveReminders([]);
+    alert('All reminders cancelled');
+  }
+
   if (!isSupported) {
     return (
       <div className="p-4 border rounded-lg bg-yellow-50 border-yellow-200">
@@ -166,6 +205,55 @@ export function PushNotifications() {
               >
                 {isLoading ? 'Sending...' : 'Send Test Notification'}
               </Button>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t">
+              <label className="text-sm font-medium text-blue-800">
+                Reminder Notification:
+              </label>
+              <input
+                type="text"
+                value={reminderMessage}
+                onChange={(e) => setReminderMessage(e.target.value)}
+                placeholder="Enter your reminder message"
+                className="w-full p-2 border rounded text-sm"
+              />
+              <div className="flex gap-2 items-center">
+                <label className="text-xs text-blue-700">Delay (seconds):</label>
+                <input
+                  type="number"
+                  value={reminderSeconds}
+                  onChange={(e) => setReminderSeconds(Number(e.target.value))}
+                  min="1"
+                  max="3600"
+                  className="w-20 p-1 border rounded text-sm"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={setReminder}
+                  disabled={isLoading || !reminderMessage.trim() || reminderSeconds < 1}
+                  size="sm"
+                  variant="outline"
+                >
+                  {isLoading ? 'Setting...' : `Set Reminder (${reminderSeconds}s)`}
+                </Button>
+                {activeReminders.length > 0 && (
+                  <Button 
+                    onClick={cancelAllReminders}
+                    disabled={isLoading}
+                    size="sm"
+                    variant="destructive"
+                  >
+                    Cancel ({activeReminders.length})
+                  </Button>
+                )}
+              </div>
+              {activeReminders.length > 0 && (
+                <p className="text-xs text-green-700">
+                  ⏰ {activeReminders.length} reminder(s) active
+                </p>
+              )}
             </div>
           </>
         ) : (

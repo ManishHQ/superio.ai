@@ -2,48 +2,58 @@
 
 import { useState } from 'react';
 import { Button } from './ui/button';
+import { 
+  sendSimpleNotification,
+  sendServiceWorkerNotification,
+  requestNotificationPermission
+} from '../utils/notifications';
 
 export function SimpleNotifications() {
   const [message, setMessage] = useState('Hello from PWA!');
   const [hasPermission, setHasPermission] = useState(false);
 
-  async function requestPermission() {
-    if ('Notification' in window) {
-      const permission = await Notification.requestPermission();
-      setHasPermission(permission === 'granted');
-      return permission === 'granted';
-    }
-    return false;
+  async function handleRequestPermission() {
+    const permission = await requestNotificationPermission();
+    setHasPermission(permission === 'granted');
+    return permission === 'granted';
   }
 
-  async function sendSimpleNotification() {
-    const permitted = hasPermission || await requestPermission();
+  async function handleSendSimpleNotification() {
+    const permitted = hasPermission || await handleRequestPermission();
     
     if (permitted) {
-      new Notification('PWA Test Notification', {
+      const result = await sendSimpleNotification({
+        title: 'PWA Test Notification',
         body: message,
         icon: '/icons/icon-192.svg',
         badge: '/icons/icon-192.svg',
         tag: 'pwa-test',
         requireInteraction: false,
       });
-      alert('Notification sent!');
+      
+      if (result.success) {
+        alert('Notification sent!');
+      } else {
+        alert(`Failed to send notification: ${result.error}`);
+      }
     } else {
       alert('Notification permission denied');
     }
   }
 
-  async function sendServiceWorkerNotification() {
-    if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.ready;
-      
-      await registration.showNotification('Service Worker Notification', {
-        body: message,
-        icon: '/icons/icon-192.svg',
-        badge: '/icons/icon-192.svg',
-        tag: 'sw-test',
-      });
+  async function handleSendServiceWorkerNotification() {
+    const result = await sendServiceWorkerNotification({
+      title: 'Service Worker Notification',
+      body: message,
+      icon: '/icons/icon-192.svg',
+      badge: '/icons/icon-192.svg',
+      tag: 'sw-test',
+    });
+    
+    if (result.success) {
       alert('Service Worker notification sent!');
+    } else {
+      alert(`Failed to send SW notification: ${result.error}`);
     }
   }
 
@@ -61,16 +71,16 @@ export function SimpleNotifications() {
         />
         
         <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
-          <Button onClick={sendSimpleNotification} className="w-full sm:w-auto">
+          <Button onClick={handleSendSimpleNotification} className="w-full sm:w-auto">
             Send Browser Notification
           </Button>
           
-          <Button onClick={sendServiceWorkerNotification} variant="outline" className="w-full sm:w-auto">
+          <Button onClick={handleSendServiceWorkerNotification} variant="outline" className="w-full sm:w-auto">
             Send SW Notification
           </Button>
           
           <Button 
-            onClick={requestPermission} 
+            onClick={handleRequestPermission} 
             variant="outline"
             size="sm"
             className="w-full sm:w-auto"

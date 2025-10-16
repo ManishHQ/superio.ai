@@ -2,18 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
-import { subscribeUser, unsubscribeUser, sendNotification } from '../app/actions';
-
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+import { 
+  isPushNotificationSupported,
+  subscribeToPushNotifications,
+  unsubscribeFromPushNotifications,
+  getCurrentPushSubscription,
+  sendPushNotification
+} from '../utils/notifications';
+import { 
+  setReminder,
+  cancelAllReminders,
+  subscribeToReminders,
+  getActiveReminders,
+  type Reminder
+} from '../utils/reminders';
 
 export function PushNotifications() {
   const [isSupported, setIsSupported] = useState(false);
@@ -22,60 +24,48 @@ export function PushNotifications() {
   const [reminderMessage, setReminderMessage] = useState('Reminder: Time to check your PWA!');
   const [reminderSeconds, setReminderSeconds] = useState(10);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeReminders, setActiveReminders] = useState<number[]>([]);
+  const [activeReminders, setActiveReminders] = useState<Reminder[]>([]);
 
   useEffect(() => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      setIsSupported(true);
-      registerServiceWorker();
-    }
+    const initialize = async () => {
+      setIsSupported(isPushNotificationSupported());
+      
+      if (isPushNotificationSupported()) {
+        const currentSub = await getCurrentPushSubscription();
+        setSubscription(currentSub);
+      }
+    };
+
+    initialize();
   }, []);
 
-  async function registerServiceWorker() {
-    try {
-      const registration = await navigator.serviceWorker.register('/sw.js', {
-        scope: '/',
-        updateViaCache: 'none',
-      });
+  useEffect(() => {
+    // Initialize with current reminders
+    setActiveReminders(getActiveReminders());
 
-      const sub = await registration.pushManager.getSubscription();
-      setSubscription(sub);
-    } catch (error) {
-      console.error('Service worker registration failed:', error);
-    }
-  }
+    // Subscribe to reminder updates
+    const unsubscribe = subscribeToReminders((updatedReminders) => {
+      setActiveReminders(updatedReminders);
+    });
+
+    return unsubscribe;
+  }, []);
+
 
   async function subscribeToPush() {
     try {
       setIsLoading(true);
       
-      // Request notification permission
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        alert('Permission not granted for notifications');
-        return;
+      const result = await subscribeToPushNotifications();
+      if (result.success) {
+        setSubscription(result.subscription || null);
+        alert('Successfully subscribed to push notifications!');
+      } else {
+        alert(`Subscription failed: ${result.error}`);
       }
-
-      const registration = await navigator.serviceWorker.ready;
-      const sub = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
-        ),
-      });
-
-      setSubscription(sub);
-      
-      // Send subscription to server
-      const result = await subscribeUser(sub);
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      console.log('Successfully subscribed to push notifications');
     } catch (error) {
-      console.error('Error subscribing to push notifications:', error);
-      alert('Failed to subscribe to push notifications');
+      console.error('Push subscription failed:', error);
+      alert('Push subscription failed');
     } finally {
       setIsLoading(false);
     }
@@ -84,16 +74,17 @@ export function PushNotifications() {
   async function unsubscribeFromPush() {
     try {
       setIsLoading(true);
-
-      if (subscription) {
-        await subscription.unsubscribe();
-        await unsubscribeUser(subscription);
+      
+      const result = await unsubscribeFromPushNotifications();
+      if (result.success) {
         setSubscription(null);
-        console.log('Successfully unsubscribed from push notifications');
+        alert('Successfully unsubscribed from push notifications!');
+      } else {
+        alert(`Unsubscription failed: ${result.error}`);
       }
     } catch (error) {
-      console.error('Error unsubscribing from push notifications:', error);
-      alert('Failed to unsubscribe from push notifications');
+      console.error('Push unsubscription failed:', error);
+      alert('Push unsubscription failed');
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +94,7 @@ export function PushNotifications() {
     try {
       setIsLoading(true);
       
-      const result = await sendNotification(message);
+      const result = await sendPushNotification(message, 'PWA Test Notification');
       if (result.success) {
         alert('Notification sent successfully!');
         setMessage('');
@@ -118,28 +109,21 @@ export function PushNotifications() {
     }
   }
 
-  async function setReminder() {
+  async function setScheduledReminder() {
     try {
       setIsLoading(true);
       
-      const timerId = window.setTimeout(async () => {
-        try {
-          const result = await sendNotification(reminderMessage);
-          if (result.success) {
-            console.log('Reminder notification sent successfully!');
-          } else {
-            console.error('Failed to send reminder notification:', result.error);
-          }
-        } catch (error) {
-          console.error('Error sending reminder notification:', error);
-        }
-        
-        setActiveReminders(prev => prev.filter(id => id !== timerId));
-      }, reminderSeconds * 1000);
+      const result = setReminder({
+        message: reminderMessage,
+        delaySeconds: reminderSeconds,
+        title: 'PWA Reminder'
+      });
       
-      setActiveReminders(prev => [...prev, timerId]);
-      alert(`Reminder set for ${reminderSeconds} seconds!`);
-      
+      if (result.success) {
+        alert(`Reminder set for ${reminderSeconds} seconds!`);
+      } else {
+        alert(`Failed to set reminder: ${result.error}`);
+      }
     } catch (error) {
       console.error('Error setting reminder:', error);
       alert('Failed to set reminder');
@@ -148,10 +132,9 @@ export function PushNotifications() {
     }
   }
 
-  function cancelAllReminders() {
-    activeReminders.forEach(timerId => clearTimeout(timerId));
-    setActiveReminders([]);
-    alert('All reminders cancelled');
+  function handleCancelAllReminders() {
+    const cancelledCount = cancelAllReminders();
+    alert(`Cancelled ${cancelledCount} reminders`);
   }
 
   if (!isSupported) {
@@ -231,7 +214,7 @@ export function PushNotifications() {
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
-                  onClick={setReminder}
+                  onClick={setScheduledReminder}
                   disabled={isLoading || !reminderMessage.trim() || reminderSeconds < 1}
                   size="sm"
                   variant="outline"
@@ -241,7 +224,7 @@ export function PushNotifications() {
                 </Button>
                 {activeReminders.length > 0 && (
                   <Button 
-                    onClick={cancelAllReminders}
+                    onClick={handleCancelAllReminders}
                     disabled={isLoading}
                     size="sm"
                     variant="destructive"
@@ -252,9 +235,21 @@ export function PushNotifications() {
                 )}
               </div>
               {activeReminders.length > 0 && (
-                <p className="text-xs text-green-700">
-                  ⏰ {activeReminders.length} reminder(s) active
-                </p>
+                <div className="space-y-1">
+                  <p className="text-xs text-green-700 font-semibold">
+                    ⏰ {activeReminders.length} reminder(s) active
+                  </p>
+                  {activeReminders.slice(0, 3).map((reminder) => (
+                    <p key={reminder.id} className="text-xs text-gray-600">
+                      📅 {reminder.message} - {reminder.scheduledFor.toLocaleTimeString()}
+                    </p>
+                  ))}
+                  {activeReminders.length > 3 && (
+                    <p className="text-xs text-gray-500">
+                      +{activeReminders.length - 3} more...
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </>

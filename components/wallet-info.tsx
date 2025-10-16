@@ -11,9 +11,9 @@ export function WalletInfo() {
 	if (!isConnected) {
 		return (
 			<div className='flex flex-col items-center gap-4 sm:gap-6 p-4 sm:p-8 bg-card border-2 border-border rounded-lg shadow-lg w-full'>
-				<div className='w-12 h-12 sm:w-16 sm:h-16 bg-primary rounded-full flex items-center justify-center'>
+				<div className='w-12 h-12 sm:w-16 sm:h-16 border-2 border-primary rounded-full flex items-center justify-center'>
 					<svg
-						className='w-6 h-6 sm:w-8 sm:h-8 text-primary-foreground'
+						className='w-6 h-6 sm:w-8 sm:h-8 text-primary'
 						fill='none'
 						stroke='currentColor'
 						viewBox='0 0 24 24'
@@ -43,9 +43,9 @@ export function WalletInfo() {
 		<div className='bg-card border-2 border-border rounded-lg shadow-xl p-4 sm:p-6 w-full'>
 			<div className='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6'>
 				<div className='flex items-center gap-3'>
-					<div className='w-8 h-8 sm:w-10 sm:h-10 bg-primary rounded-full flex items-center justify-center'>
+					<div className='w-8 h-8 sm:w-10 sm:h-10 border-2 border-primary rounded-full flex items-center justify-center'>
 						<svg
-							className='w-4 h-4 sm:w-5 sm:h-5 text-primary-foreground'
+							className='w-4 h-4 sm:w-5 sm:h-5 text-primary'
 							fill='currentColor'
 							viewBox='0 0 20 20'
 						>

@@ -75,14 +75,12 @@ export function SimpleNotifications() {
             Send Browser Notification
           </Button>
 
-          <Button onClick={handleSendServiceWorkerNotification} variant="outline" className="w-full sm:w-auto">
+          <Button onClick={handleSendServiceWorkerNotification} className="w-full sm:w-auto">
             Send SW Notification
           </Button>
 
           <Button
             onClick={handleRequestPermission}
-            variant="outline"
-            size="sm"
             className="w-full sm:w-auto"
           >
             Request Permission

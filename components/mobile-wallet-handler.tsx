@@ -37,14 +37,14 @@ export function MobileWalletHandler() {
   if (isPWA && isMobile) {
     return (
       <div className="space-y-4">
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <h4 className="font-semibold text-amber-800 mb-2">
+        <div className="p-4 bg-card border-2 border-border rounded-lg">
+          <h4 className="font-semibold text-foreground mb-2">
             📱 Mobile PWA Wallet Connection
           </h4>
-          
+
           {!showMobileInstructions ? (
             <div className="space-y-3">
-              <p className="text-sm text-amber-700">
+              <p className="text-sm text-muted-foreground">
                 You're using the PWA on mobile. Try connecting below, or see mobile-specific options:
               </p>
               
@@ -69,17 +69,19 @@ export function MobileWalletHandler() {
                   </Button>
                 </div>
                 
-                <button
+                <Button
                   onClick={() => setShowMobileInstructions(true)}
-                  className="text-xs text-amber-600 underline"
+                  variant="link"
+                  size="sm"
+                  className="text-xs"
                 >
                   Need help? See detailed instructions
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
-            <div className="space-y-3 text-sm text-amber-700">
-              <p className="font-medium">Mobile PWA Wallet Connection Guide:</p>
+            <div className="space-y-3 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">Mobile PWA Wallet Connection Guide:</p>
               
               <div className="space-y-2">
                 <div>
@@ -111,13 +113,15 @@ export function MobileWalletHandler() {
               </div>
               
               <ConnectButton />
-              
-              <button
+
+              <Button
                 onClick={() => setShowMobileInstructions(false)}
-                className="text-xs text-amber-600 underline"
+                variant="link"
+                size="sm"
+                className="text-xs"
               >
                 Hide instructions
-              </button>
+              </Button>
             </div>
           )}
         </div>

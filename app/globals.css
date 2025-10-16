@@ -169,22 +169,25 @@
     background: oklch(0 0 0) !important;
     border: 2px solid oklch(0.75 0.25 145) !important;
     color: oklch(0.95 0.32 145) !important;
-    transform: skewX(-2deg);
-    box-shadow: 4px 4px 0px oklch(0.75 0.25 145 / 40%);
+    box-shadow: 5px 5px 0px oklch(0.75 0.25 145 / 50%);
     position: relative;
+    font-weight: 600;
+    letter-spacing: 0.5px;
   }
   button:hover {
-    text-shadow: 0 0 10px oklch(0.9 0.3 145 / 70%);
-    box-shadow: 6px 6px 0px oklch(0.85 0.28 145 / 60%);
+    text-shadow: 0 0 12px oklch(0.9 0.3 145 / 80%);
+    box-shadow: 7px 7px 0px oklch(0.85 0.28 145 / 70%), 0 0 20px oklch(0.85 0.28 145 / 30%);
     border-color: oklch(0.9 0.3 145) !important;
+    transform: translateY(-2px);
   }
   button:active {
-    transform: skewX(-2deg) translateY(2px);
-    box-shadow: 2px 2px 0px oklch(0.75 0.25 145 / 40%);
+    transform: translateY(3px) translateX(3px);
+    box-shadow: 2px 2px 0px oklch(0.75 0.25 145 / 50%);
   }
   button:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
+    box-shadow: 3px 3px 0px oklch(0.75 0.25 145 / 20%);
   }
   input, textarea, button {
     border-radius: var(--radius) !important;
@@ -232,7 +235,25 @@
 }
 
 [data-rk] button {
+  background: oklch(0 0 0) !important;
   border: 2px solid oklch(0.75 0.25 145) !important;
+  color: oklch(0.95 0.32 145) !important;
+  box-shadow: 5px 5px 0px oklch(0.75 0.25 145 / 50%) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  transition: all 0.15s ease !important;
+}
+
+[data-rk] button:hover {
+  text-shadow: 0 0 12px oklch(0.9 0.3 145 / 80%) !important;
+  box-shadow: 7px 7px 0px oklch(0.85 0.28 145 / 70%), 0 0 20px oklch(0.85 0.28 145 / 30%) !important;
+  border-color: oklch(0.9 0.3 145) !important;
+  transform: translateY(-2px) !important;
+}
+
+[data-rk] button:active {
+  transform: translateY(3px) translateX(3px) !important;
+  box-shadow: 2px 2px 0px oklch(0.75 0.25 145 / 50%) !important;
 }
 
 [data-rk] [role="dialog"] {

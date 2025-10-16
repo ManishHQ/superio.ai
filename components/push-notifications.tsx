@@ -139,8 +139,8 @@ export function PushNotifications() {
 
   if (!isSupported) {
     return (
-      <div className="p-4 border rounded-lg bg-yellow-50 border-yellow-200">
-        <p className="text-yellow-800">
+      <div className="p-4 border-2 border-destructive rounded-lg bg-card">
+        <p className="text-destructive">
           Push notifications are not supported in this browser.
         </p>
       </div>
@@ -148,30 +148,30 @@ export function PushNotifications() {
   }
 
   return (
-    <div className="space-y-4 p-4 sm:p-6 border rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 w-full">
-      <h3 className="text-lg sm:text-xl font-semibold text-blue-900">Push Notifications</h3>
+    <div className="space-y-4 p-4 sm:p-6 border-2 border-border rounded-lg bg-card w-full">
+      <h3 className="text-lg sm:text-xl font-semibold text-foreground">Push Notifications</h3>
       
       <div className="space-y-3">
         {subscription ? (
           <>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <p className="text-sm text-green-700 font-medium">
+              <div className="w-2 h-2 bg-primary rounded-full"></div>
+              <p className="text-sm text-primary font-medium">
                 ✅ Subscribed to push notifications
               </p>
             </div>
-            
-            <Button 
-              onClick={unsubscribeFromPush} 
-              variant="outline" 
+
+            <Button
+              onClick={unsubscribeFromPush}
+              variant="outline"
               disabled={isLoading}
               size="sm"
             >
               {isLoading ? 'Unsubscribing...' : 'Unsubscribe'}
             </Button>
 
-            <div className="space-y-2 pt-2 border-t">
-              <label className="text-sm font-medium text-blue-800">
+            <div className="space-y-2 pt-2 border-t border-border">
+              <label className="text-sm font-medium text-foreground">
                 Test Notification Message:
               </label>
               <input
@@ -179,9 +179,9 @@ export function PushNotifications() {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Enter your notification message"
-                className="w-full p-2 border rounded text-sm"
+                className="w-full p-2 border border-border rounded text-sm bg-background text-foreground"
               />
-              <Button 
+              <Button
                 onClick={sendTestNotification}
                 disabled={isLoading || !message.trim()}
                 size="sm"
@@ -190,8 +190,8 @@ export function PushNotifications() {
               </Button>
             </div>
 
-            <div className="space-y-2 pt-2 border-t">
-              <label className="text-sm font-medium text-blue-800">
+            <div className="space-y-2 pt-2 border-t border-border">
+              <label className="text-sm font-medium text-foreground">
                 Reminder Notification:
               </label>
               <input
@@ -199,17 +199,17 @@ export function PushNotifications() {
                 value={reminderMessage}
                 onChange={(e) => setReminderMessage(e.target.value)}
                 placeholder="Enter your reminder message"
-                className="w-full p-2 border rounded text-sm"
+                className="w-full p-2 border border-border rounded text-sm bg-background text-foreground"
               />
               <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                <label className="text-xs text-blue-700 shrink-0">Delay (seconds):</label>
+                <label className="text-xs text-muted-foreground shrink-0">Delay (seconds):</label>
                 <input
                   type="number"
                   value={reminderSeconds}
                   onChange={(e) => setReminderSeconds(Number(e.target.value))}
                   min="1"
                   max="3600"
-                  className="w-full sm:w-20 p-1 border rounded text-sm"
+                  className="w-full sm:w-20 p-1 border border-border rounded text-sm bg-background text-foreground"
                 />
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -236,16 +236,16 @@ export function PushNotifications() {
               </div>
               {activeReminders.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs text-green-700 font-semibold">
+                  <p className="text-xs text-primary font-semibold">
                     ⏰ {activeReminders.length} reminder(s) active
                   </p>
                   {activeReminders.slice(0, 3).map((reminder) => (
-                    <p key={reminder.id} className="text-xs text-gray-600">
+                    <p key={reminder.id} className="text-xs text-muted-foreground">
                       📅 {reminder.message} - {reminder.scheduledFor.toLocaleTimeString()}
                     </p>
                   ))}
                   {activeReminders.length > 3 && (
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       +{activeReminders.length - 3} more...
                     </p>
                   )}
@@ -255,10 +255,10 @@ export function PushNotifications() {
           </>
         ) : (
           <>
-            <p className="text-sm text-blue-700">
+            <p className="text-sm text-muted-foreground">
               Subscribe to receive push notifications from this PWA
             </p>
-            <Button 
+            <Button
               onClick={subscribeToPush}
               disabled={isLoading}
             >
@@ -268,7 +268,7 @@ export function PushNotifications() {
         )}
       </div>
 
-      <div className="text-xs text-blue-600 space-y-1">
+      <div className="text-xs text-accent space-y-1">
         <p>💡 <strong>Tips for testing:</strong></p>
         <ul className="list-disc list-inside space-y-1 ml-2">
           <li>Deploy to Vercel for HTTPS (required for push notifications)</li>

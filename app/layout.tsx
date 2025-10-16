@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from './providers';
 import { PWAInstall } from '../components/pwa-install';
+import { MatrixRainWrapper } from '../components/matrix-rain-wrapper';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,10 +42,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="matrix">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <MatrixRainWrapper />
         <Providers>{children}</Providers>
         <PWAInstall />
       </body>

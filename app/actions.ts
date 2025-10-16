@@ -2,18 +2,24 @@
 
 import webpush from 'web-push';
 
-// Configure web-push with VAPID details
-webpush.setVapidDetails(
-  process.env.VAPID_EMAIL!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+// Configure web-push with VAPID details (only if env vars are set)
+const vapidEmail = process.env.VAPID_EMAIL;
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+if (vapidEmail && vapidPublicKey && vapidPrivateKey) {
+  webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
+}
 
 // In-memory store for subscriptions (use database in production)
 let subscriptions: webpush.PushSubscription[] = [];
 
 export async function subscribeUser(subscription: any) {
   try {
+    if (!vapidEmail || !vapidPublicKey || !vapidPrivateKey) {
+      return { success: false, error: 'Push notifications not configured. Set VAPID environment variables.' };
+    }
+
     // Convert browser PushSubscription to web-push format
     const webPushSubscription: webpush.PushSubscription = {
       endpoint: subscription.endpoint,
@@ -55,6 +61,10 @@ export async function unsubscribeUser(subscription: any) {
 
 export async function sendNotification(message: string) {
   try {
+    if (!vapidEmail || !vapidPublicKey || !vapidPrivateKey) {
+      return { success: false, error: 'Push notifications not configured. Set VAPID environment variables.' };
+    }
+
     if (subscriptions.length === 0) {
       return { success: false, error: 'No active subscriptions' };
     }

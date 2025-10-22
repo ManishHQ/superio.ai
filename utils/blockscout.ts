@@ -1,8 +1,22 @@
 import { Client } from "@modelcontextprotocol/sdk/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import type { MCP_TOOL_NAMES, MCPToolArgs, McpToolName } from "./types";
+import { MCP_TOOL_NAMES, MCPToolArgs, McpToolName } from "./types";
 
 const baseUrl = new URL(process.env.BLOCKSCOUT_MCP_URL!);
+
+async function getClient() {
+  const transport = new StreamableHTTPClientTransport(baseUrl);
+  const client = new Client({
+    name: "Blockscout-client",
+    version: "1.0.0",
+  });
+
+  await client.connect(transport);
+  console.log("✅ Connected!");
+  return client;
+}
+export type ClientType = Awaited<ReturnType<typeof getClient>>;
+
 async function exploreTools() {
   const transport = new StreamableHTTPClientTransport(baseUrl);
   const client = new Client({
@@ -30,27 +44,15 @@ async function exploreTools() {
 }
 
 async function checkAndQueryBalance({
+  client,
   chainId,
   address,
 }: MCPToolArgs[typeof MCP_TOOL_NAMES.GET_ADDRESS_INFO]) {
-  const transport = new StreamableHTTPClientTransport(baseUrl);
-  const client = new Client({
-    name: "Blockscout-client",
-    version: "1.0.0",
-  });
-
-  await client.connect(transport);
-  console.log("✅ Connected!");
-
-  // See what tools we have
-  const tools = await client.listTools();
-
-  // Try to query balance
   try {
     const result = await client.callTool({
-      name: "get_address_info",
+      name: MCP_TOOL_NAMES.GET_ADDRESS_INFO,
       arguments: {
-        chain_id: chainId, // Ethereum Mainnet
+        chain_id: chainId,
         address,
       },
     });
@@ -59,16 +61,47 @@ async function checkAndQueryBalance({
       !Array.isArray(result.content) ||
       !result.content[0]
     ) {
-      throw new Error(`Invalid response format from ${toolName}`);
+      throw new Error(`Invalid response format`);
     }
-    console.log("💰 Balance result:", result.content);
+    const text = result.content[0].text;
+    const parsed = JSON.parse(text);
+    console.log("Parsed Text: ", parsed);
   } catch (error) {
-    console.log("❌ Balance query failed:", error);
+    console.log("Balance query failed:", error);
   }
+}
 
+async function getTransactionInfo({
+  client,
+  chainId,
+  hash,
+  includeRawInput,
+}: MCPToolArgs[typeof MCP_TOOL_NAMES.GET_TRANSACTION_INFO]) {
+  const result = await client.callTool({
+    name: MCP_TOOL_NAMES.GET_TRANSACTION_INFO,
+    arguments: {
+      chain_id: chainId,
+      transaction_hash: hash,
+      includeRawInput,
+    },
+  });
+  if (!result.content || !Array.isArray(result.content) || !result.content[0]) {
+    throw new Error(`Invalid response format`);
+  }
+  const text = result.content[0].text;
+  const parsed = JSON.parse(text);
+  console.log("Parsed Text: ", parsed);
+}
+
+async function main() {
+  const client = await getClient();
+  await getTransactionInfo({
+    client,
+    chainId: "1",
+    hash: "0xe9bac95d9c0117eb00edcd2d1797bd627e21ce01bf0dc426017336aaadf56e0c",
+    includeRawInput: true,
+  });
   await client.close();
 }
-checkAndQueryBalance({
-  chainId: "1",
-  address: "0x00000000219ab540356cBB839Cbe05303d7705Fa",
-}).catch(console.error);
+
+main().catch(console.error);

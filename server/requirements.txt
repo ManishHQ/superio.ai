@@ -1,0 +1,21 @@
+# Core Framework
+flask==3.1.0
+flask-cors==5.0.0
+uagents==0.22.0
+
+# Data Processing
+pydantic==2.10.5
+python-dotenv==1.0.1
+
+# HTTP & API
+requests==2.32.3
+aiohttp==3.11.11
+
+# AI/LLM
+openai>=1.0.0
+
+# Blockchain & Web3
+cosmpy==0.11.2
+
+# Utilities
+python-dateutil==2.9.0

@@ -18,6 +18,13 @@ self.addEventListener('install', (event) => {
 
 // Fetch event - serve cached content when offline
 self.addEventListener('fetch', (event) => {
+  // Bypass service worker for API calls
+  if (event.request.url.includes('/api/') || 
+      event.request.url.includes('localhost:8000') ||
+      event.request.url.includes('127.0.0.1:8000')) {
+    return; // Let the browser handle these requests normally
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

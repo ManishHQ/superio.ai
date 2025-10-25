@@ -11,7 +11,7 @@ export function ChatInterface() {
     {
       id: '1',
       role: 'assistant',
-      content: 'Hello! I\'m your AI assistant. How can I help you today?',
+      content: 'Hello! I\'m Superio, your advanced onchain intelligence AI assistant. I can help you with cryptocurrency analysis, DeFi insights, market data, and general conversation. Feel free to ask me anything!',
       timestamp: new Date(),
     },
   ]);
@@ -42,22 +42,51 @@ export function ChatInterface() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-
-    // Simulate AI typing
     setIsTyping(true);
 
-    // Simulate AI response (replace with actual API call later)
-    setTimeout(() => {
+    try {
+      // Call the DeFi chat API
+      const response = await fetch('http://localhost:5001/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content,
+          user_id: 'web_user',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Create AI response message
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: `I received your message: "${content}". This is a placeholder response. Backend integration will be added later.`,
+        content: data.response,
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      
+      // Show error message
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Sorry, I encountered an error processing your request. Please try again or check if the server is running.',
+        timestamp: new Date(),
+      };
+      
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500 + Math.random() * 1000);
+    }
   };
 
   const handleClearChat = () => {
@@ -92,9 +121,9 @@ export function ChatInterface() {
             </svg>
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">AI Assistant</h1>
+            <h1 className="text-xl font-bold text-foreground">DeFi AI Assistant</h1>
             <p className="text-xs text-muted-foreground">
-              {isTyping ? 'Typing...' : 'Online'}
+              {isTyping ? 'Analyzing...' : 'Multi-Agent + ASI:One Powered'}
             </p>
           </div>
         </div>

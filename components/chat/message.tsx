@@ -1,6 +1,8 @@
 'use client';
 
 import { cn } from '@/lib/utils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export interface Message {
   id: string;
@@ -56,9 +58,28 @@ export function ChatMessage({ message }: MessageProps) {
               : 'border-border'
           )}
         >
-          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-            {message.content}
-          </p>
+          <div className="text-sm text-foreground prose prose-sm prose-invert max-w-none">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                strong: ({ children }) => <strong className="font-bold text-primary">{children}</strong>,
+                em: ({ children }) => <em className="italic">{children}</em>,
+                ul: ({ children }) => <ul className="list-disc pl-5 mb-2 space-y-1">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-5 mb-2 space-y-1">{children}</ol>,
+                li: ({ children }) => <li className="text-sm">{children}</li>,
+                h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-sm font-bold mb-2">{children}</h3>,
+                code: ({ children }) => <code className="bg-secondary px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                pre: ({ children }) => <pre className="bg-secondary p-2 rounded overflow-x-auto mb-2">{children}</pre>,
+                blockquote: ({ children }) => <blockquote className="border-l-2 border-primary pl-3 italic mb-2">{children}</blockquote>,
+                a: ({ href, children }) => <a href={href} className="text-primary underline hover:text-primary/80" target="_blank" rel="noopener noreferrer">{children}</a>,
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
 
           {message.attachments && message.attachments.length > 0 && (
             <div className="mt-3 space-y-2">
@@ -89,12 +110,14 @@ export function ChatMessage({ message }: MessageProps) {
           )}
         </div>
 
-        <span className="text-xs text-muted-foreground px-1">
-          {message.timestamp.toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </span>
+        <div className="flex items-center gap-2 px-1">
+          <span className="text-xs text-muted-foreground">
+            {message.timestamp.toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
+        </div>
       </div>
 
       {isUser && (

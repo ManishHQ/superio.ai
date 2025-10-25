@@ -1,0 +1,143 @@
+server/
+│
+├── 📄 Configuration Files
+│   ├── .env.example              # Environment variables template
+│   ├── .gitignore                # Git ignore rules
+│   └── requirements.txt          # Python dependencies
+│
+├── 📚 Documentation
+│   ├── README.md                 # Complete system documentation
+│   ├── QUICKSTART.md             # 5-minute setup guide
+│   ├── ARCHITECTURE.md           # System architecture & message flow
+│   ├── SUMMARY.md                # Implementation summary
+│   └── PROJECT_STRUCTURE.txt     # This file
+│
+├── 🤖 agents/                    # Multi-Agent System
+│   ├── coordinator_agent.py      # Intent classifier & router (Port 8000)
+│   ├── defi_agent.py             # DeFi orchestrator + ASI1 (Port 8001)
+│   ├── coin_agent.py             # CoinGecko data fetcher (Port 8004)
+│   └── fgi_agent.py              # Fear & Greed Index (Port 8003)
+│
+├── 🌐 api/                       # HTTP API Layer
+│   ├── __init__.py
+│   └── server.py                 # Flask REST API (Port 5000)
+│
+├── 📦 models/                    # Message Protocol
+│   ├── __init__.py
+│   └── messages.py               # Pydantic models for agent communication
+│       ├── CoordinatorRequest / Response
+│       ├── DeFiAnalysisRequest / Response
+│       ├── CoinRequest / Response
+│       ├── FGIRequest / Response
+│       └── Health & Error messages
+│
+├── 🔧 tools/                     # External API Integration
+│   ├── __init__.py
+│   └── defi_tools.py             # API clients
+│       ├── CoinGeckoAPI          # Crypto price data
+│       ├── FearGreedIndexAPI     # Market sentiment
+│       ├── DeFiLlamaAPI          # Protocol TVL data
+│       └── ASI1API               # LLM analysis
+│
+├── 🚀 scripts/                   # Automation Scripts
+│   ├── start_all.sh              # Start all services (executable)
+│   ├── stop_all.sh               # Stop all services (executable)
+│   ├── setup_addresses.py        # Generate agent addresses
+│   └── test_system.py            # Comprehensive test suite
+│
+├── 📁 logs/                      # Runtime Logs (auto-created)
+│   ├── coordinator_agent.log
+│   ├── defi_agent.log
+│   ├── coin_agent.log
+│   ├── fgi_agent.log
+│   └── api_server.log
+│
+└── 🐍 venv/                      # Virtual Environment (git-ignored)
+
+
+FILE COUNT SUMMARY
+==================
+Total Files Created:     20
+├── Agents:              4  (coordinator, defi, coin, fgi)
+├── API:                 2  (server, __init__)
+├── Models:              2  (messages, __init__)
+├── Tools:               2  (defi_tools, __init__)
+├── Scripts:             4  (start, stop, setup, test)
+├── Documentation:       5  (README, QUICKSTART, ARCHITECTURE, SUMMARY, STRUCTURE)
+└── Configuration:       3  (.env.example, .gitignore, requirements.txt)
+
+
+SERVICES & PORTS
+================
+Flask API Server         Port 5000   (HTTP REST endpoints)
+Coordinator Agent        Port 8000   (uAgent - Router)
+DeFi Agent               Port 8001   (uAgent - Orchestrator)
+FGI Agent                Port 8003   (uAgent - Sentiment)
+Coin Agent               Port 8004   (uAgent - Price Data)
+
+
+EXTERNAL DEPENDENCIES
+=====================
+uAgents Framework        Multi-agent orchestration
+Flask + CORS             HTTP API server
+Pydantic                 Message validation
+Requests                 HTTP client
+CoinGecko API            Cryptocurrency data (free)
+Alternative.me API       Fear & Greed Index (free)
+DeFiLlama API            DeFi protocols (free)
+ASI1 Mini API            LLM analysis (requires key)
+
+
+KEY FEATURES
+============
+✅ Agent-to-Agent Communication    (uAgents protocol)
+✅ Real-time Crypto Data           (CoinGecko)
+✅ Market Sentiment Analysis       (Fear & Greed Index)
+✅ AI-Powered Recommendations      (ASI1 Mini)
+✅ DeFi Protocol Tracking          (DeFiLlama)
+✅ Type-Safe Messages              (Pydantic)
+✅ REST API for Frontend           (Flask)
+✅ Automated Scripts               (Bash + Python)
+✅ Comprehensive Tests             (test_system.py)
+✅ Complete Documentation          (5 markdown files)
+
+
+QUICK START
+===========
+1. Setup:     python3 -m venv venv && source venv/bin/activate
+2. Install:   pip install -r requirements.txt
+3. Configure: cp .env.example .env && python scripts/setup_addresses.py
+4. Start:     ./scripts/start_all.sh
+5. Test:      python scripts/test_system.py
+6. Stop:      ./scripts/stop_all.sh
+
+
+API ENDPOINTS (Port 5000)
+=========================
+GET  /api/health                Health check
+GET  /api/agents                List all agents
+POST /api/chat                  General chat
+POST /api/defi/analyze          DeFi analysis
+GET  /api/coin/<coin_id>        Coin data
+GET  /api/fgi                   Fear & Greed Index
+GET  /api/trending              Trending coins
+GET  /api/protocols             DeFi protocols
+GET  /api/protocol/<name>       Specific protocol
+
+
+EXAMPLE USAGE
+=============
+# Analyze Bitcoin
+curl -X POST http://localhost:5001/api/defi/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"coin_id":"bitcoin","query":"Should I buy?","include_fgi":true}'
+
+# Get market sentiment
+curl http://localhost:5001/api/fgi
+
+# List trending coins
+curl http://localhost:5001/api/trending
+
+
+Built with ❤️ using uAgents, Flask, and ASI1 Mini
+Based on Fetch.ai's ASI DeFi Agent Architecture

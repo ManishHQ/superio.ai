@@ -17,6 +17,7 @@ class SwapParser:
     # Supported tokens and their info
     TOKENS = {
         "sol": {"symbol": "SOL", "name": "Solana", "decimals": 9},
+        "solana": {"symbol": "SOL", "name": "Solana", "decimals": 9},
         "usdc": {"symbol": "USDC", "name": "USD Coin", "decimals": 6},
         "usdt": {"symbol": "USDT", "name": "Tether", "decimals": 6},
         "eth": {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
@@ -29,12 +30,15 @@ class SwapParser:
         "base": {"symbol": "BASE", "name": "Base", "decimals": 18},
         "dai": {"symbol": "DAI", "name": "Dai Stablecoin", "decimals": 18},
         "matic": {"symbol": "MATIC", "name": "Polygon", "decimals": 18},
+        "polygon": {"symbol": "MATIC", "name": "Polygon", "decimals": 18},  # Network name alias
         "avax": {"symbol": "AVAX", "name": "Avalanche", "decimals": 18},
+        "avalanche": {"symbol": "AVAX", "name": "Avalanche", "decimals": 18},  # Network name alias
         "link": {"symbol": "LINK", "name": "Chainlink", "decimals": 18},
+        "chainlink": {"symbol": "LINK", "name": "Chainlink", "decimals": 18},  # Full name alias
     }
 
-    # Mock exchange rates (in production, fetch from real API)
-    EXCHANGE_RATES = {
+    # Mock exchange rates (fallback if API fails)
+    FALLBACK_RATES = {
         "sol_usdc": 140.50,
         "usdc_sol": 1/140.50,
         "sol_eth": 0.045,
@@ -50,6 +54,74 @@ class SwapParser:
         "btc_usdc": 45000.0,
         "usdc_btc": 1/45000.0,
     }
+
+    @staticmethod
+    def get_exchange_rate(from_token: str, to_token: str, amount: float) -> float:
+        """
+        Get real-time exchange rate from CoinGecko API
+        Falls back to mock rates if API unavailable
+        """
+        try:
+            import requests
+            
+            # Map our token symbols to CoinGecko IDs
+            coin_ids = {
+                "SOL": "solana",
+                "USDC": "usd-coin",
+                "USDT": "tether",
+                "ETH": "ethereum",
+                "BTC": "bitcoin",
+                "BASE": "ethereum",  # BASE uses ETH
+                "MATIC": "matic-network",
+                "AVAX": "avalanche-2",
+                "LINK": "chainlink",
+                "DAI": "dai",
+                "BONK": "bonk",
+                "WIF": "dogwifhat",
+                "JUP": "jupiter-exchange-solana",
+            }
+            
+            from_id = coin_ids.get(from_token.upper())
+            to_id = coin_ids.get(to_token.upper())
+            
+            if not from_id or not to_id:
+                raise ValueError("Token not supported")
+            
+            # Fetch prices from CoinGecko
+            response = requests.get(
+                f"https://api.coingecko.com/api/v3/simple/price",
+                params={
+                    "ids": f"{from_id},{to_id}",
+                    "vs_currencies": "usd"
+                },
+                timeout=5
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                from_price = data.get(from_id, {}).get("usd", 0)
+                to_price = data.get(to_id, {}).get("usd", 0)
+                
+                if from_price > 0 and to_price > 0:
+                    # Calculate exchange rate
+                    rate = from_price / to_price
+                    print(f"📊 Real-time rate from CoinGecko: 1 {from_token} = {rate:.6f} {to_token}")
+                    return rate
+            
+            raise ValueError("API returned no data")
+            
+        except Exception as e:
+            print(f"⚠️ Failed to fetch real-time rate: {e}")
+            # Fallback to mock rates
+            rate_key = f"{from_token.lower()}_{to_token.lower()}"
+            fallback_rate = SwapParser.FALLBACK_RATES.get(rate_key)
+            
+            if fallback_rate:
+                print(f"🔄 Using fallback rate: 1 {from_token} = {fallback_rate:.6f} {to_token}")
+                return fallback_rate
+            
+            print(f"⚠️ No rate found, using 1:1")
+            return 1.0
 
     @staticmethod
     def detect_swap_intent(message: str) -> bool:
@@ -101,20 +173,11 @@ class SwapParser:
                 except ValueError:
                     continue
 
-                # Calculate to_amount using exchange rate
-                rate_key = f"{from_token}_{to_token}"
-                rate = SwapParser.EXCHANGE_RATES.get(rate_key)
-
-                if not rate:
-                    # Try reverse rate
-                    reverse_key = f"{to_token}_{from_token}"
-                    reverse_rate = SwapParser.EXCHANGE_RATES.get(reverse_key)
-                    if reverse_rate:
-                        rate = 1 / reverse_rate
-                    else:
-                        # Default rough estimate
-                        rate = 1.0
-
+                # Get exchange rate from API (real-time or fallback)
+                from_token_symbol = SwapParser.TOKENS[from_token]["symbol"]
+                to_token_symbol = SwapParser.TOKENS[to_token]["symbol"]
+                
+                rate = SwapParser.get_exchange_rate(from_token_symbol, to_token_symbol, from_amount)
                 to_amount = from_amount * rate
 
                 return {

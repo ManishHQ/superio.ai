@@ -130,6 +130,44 @@ export function ChatMessage({ message }: MessageProps) {
             </div>
           )}
 
+          {/* Tools Used Display */}
+          {message.tools_used && message.tools_used.length > 0 && (
+            <div className="mt-3 p-3 bg-background border border-border rounded-lg space-y-2">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                </svg>
+                <span className="text-xs font-semibold text-muted-foreground">Data Sources Used</span>
+              </div>
+              {message.tools_used.map((tool, idx) => (
+                <div key={idx} className="flex items-start gap-2 text-xs">
+                  <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-primary mt-1.5"></div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground">{tool.name}</span>
+                      <span className="text-muted-foreground">•</span>
+                      <span className="text-primary">{tool.source}</span>
+                      {tool.results_count !== undefined && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <span className="text-muted-foreground">{tool.results_count} results</span>
+                        </>
+                      )}
+                    </div>
+                    {tool.filters && Object.keys(tool.filters).length > 0 && (
+                      <div className="mt-1 text-muted-foreground">
+                        Filters: {Object.entries(tool.filters)
+                          .filter(([_, value]) => value && value !== 'all')
+                          .map(([key, value]) => `${key}: ${value}`)
+                          .join(', ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Swap UI Component */}
           {message.swap_ui && (
             <div className="mt-4 p-4 bg-background border-2 border-primary rounded-lg space-y-3">

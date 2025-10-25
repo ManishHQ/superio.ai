@@ -172,8 +172,10 @@ def chat():
 
         # Import tools
         from tools.defi_tools import CoinGeckoAPI, FearGreedIndexAPI, extract_recommendation, ASI1API
+        from tools.yield_tools import DeFiLlamaYields, YieldAnalyzer, YIELD_TOOLS
         from agents.swap_agent import SwapParser
         from openai import OpenAI
+        import json
 
         # Get ASI API key
         asi_key = os.getenv("ASI_API_KEY")
@@ -182,43 +184,36 @@ def chat():
         if not asi_key or asi_key == "your_asi_api_key_here":
             return jsonify({"error": "ASI API key not configured"}), 500
 
-        # STEP 0: Check for swap intent FIRST (before AI classification)
-        print(f"🔄 Checking for swap intent...")
-        if SwapParser.detect_swap_intent(message):
-            swap_data = SwapParser.parse_swap_request(message)
-            if swap_data:
-                print(f"✅ Swap detected: {swap_data['from_amount']} {swap_data['from_token']} -> {swap_data['to_token']}")
-                swap_response = SwapParser.generate_swap_response(swap_data)
-                return jsonify(swap_response), 200
-
         # Initialize OpenAI client
         client = OpenAI(
             api_key=asi_key,
             base_url="https://api.asi1.ai/v1"
         )
 
-        # STEP 1: Classify intent using AI
+        # STEP 1: Classify intent using AI (including SWAP)
         print(f"🔍 Classifying intent with AI...")
         
         try:
-            classification_prompt = f"""You are classifying user messages into one of two categories.
+            classification_prompt = f"""You are classifying user messages into one of three categories.
 
 User Message: "{message}"
 
 Categories:
-- GENERAL: Greetings ("hi", "hello", "hey"), casual conversation, questions about general topics, compliments, farewells
+- SWAP: Requests to swap, exchange, trade, or convert tokens (e.g., "swap 5 sol for usdc", "exchange eth to usdc", "convert tokens")
 - CRYPTO: Specific cryptocurrency names (bitcoin, ethereum, etc.), price questions, trading advice, DeFi protocols, market analysis
+- GENERAL: Greetings ("hi", "hello", "hey"), casual conversation, questions about general topics, compliments, farewells
 
 IMPORTANT RULES:
 - Simple greetings like "hi", "hello", "how are you" → GENERAL
 - Questions without crypto keywords → GENERAL  
-- Only classify as CRYPTO if the message explicitly mentions cryptocurrency, coins, trading, or prices
+- Keywords like "swap", "exchange", "trade", "convert" → SWAP
+- Only classify as CRYPTO if the message explicitly mentions cryptocurrency info without swap/exchange intent
 
-Respond with ONLY the word: GENERAL or CRYPTO"""
+Respond with ONLY the word: SWAP, CRYPTO, or GENERAL"""
 
             classification_response = client.chat.completions.create(
                 messages=[
-                    {"role": "system", "content": "You are an intent classifier. You respond with only one word: GENERAL or CRYPTO. Greetings and casual conversation are GENERAL."},
+                    {"role": "system", "content": "You are an intent classifier. You respond with only one word: SWAP, CRYPTO, or GENERAL. Greetings and casual conversation are GENERAL. Swap/exchange requests are SWAP."},
                     {"role": "user", "content": classification_prompt}
                 ],
                 model="asi1-mini",
@@ -234,9 +229,11 @@ Respond with ONLY the word: GENERAL or CRYPTO"""
             # Fallback classification - be very conservative
             message_lower = message.lower().strip()
             
+            # Check for swap intent first
+            if SwapParser.detect_swap_intent(message):
+                intent = "SWAP"
             # Greetings should always be GENERAL
-            greetings = ["hi", "hello", "hey", "good morning", "good afternoon", "good evening", "how are you", "what's up"]
-            if any(greeting in message_lower for greeting in greetings):
+            elif any(greeting in message_lower for greeting in ["hi", "hello", "hey", "good morning", "good afternoon", "good evening", "how are you", "what's up"]):
                 intent = "GENERAL"
             # Only classify as CRYPTO if explicit crypto keywords
             elif any(kw in message_lower for kw in ["bitcoin", "btc", "ethereum", "eth", "price", "trading", "defi", "crypto", "coin"]):
@@ -247,7 +244,33 @@ Respond with ONLY the word: GENERAL or CRYPTO"""
             print(f"⚠️ Using fallback classification: {intent}")
 
         # STEP 2: Route based on intent
-        if intent == "CRYPTO":
+        if intent == "SWAP":
+            print(f"🔄 Handling as SWAP query...")
+            
+            # Parse swap request using SwapParser
+            swap_data = SwapParser.parse_swap_request(message)
+            if swap_data:
+                print(f"✅ Swap parsed: {swap_data['from_amount']} {swap_data['from_token']} -> {swap_data['to_token']}")
+                swap_response = SwapParser.generate_swap_response(swap_data)
+                return jsonify(swap_response), 200
+            else:
+                # Couldn't parse swap details, provide general guidance
+                print(f"⚠️ Could not parse swap details")
+                response_text = """I'd be happy to help you swap tokens! To perform a swap, please specify:
+                
+- **From token**: What you want to swap (e.g., SOL, ETH, USDC)
+- **To token**: What you want to receive (e.g., USDC, USDT)
+- **Amount**: How much you want to swap
+
+Example: "swap 5 sol for usdc"
+
+**Supported tokens:** SOL, USDC, USDT, ETH, BTC, BONK, WIF, JUP
+
+Would you like to try again with specific details?"""
+                
+                return jsonify({"response": response_text}), 200
+                
+        elif intent == "CRYPTO":
             print(f"💰 Handling as CRYPTO query...")
             
             # Extract coin_id from message
@@ -302,20 +325,99 @@ Respond with ONLY the word: GENERAL or CRYPTO"""
             system_prompt = """You are Superio, an advanced onchain intelligence AI assistant. You specialize in DeFi, cryptocurrency, and blockchain technology, but you're also friendly and capable of general conversation. Be conversational, helpful, and engaging. Keep responses concise (2-4 sentences). Never introduce yourself as ASI:One or any other identity - you are Superio."""
 
         print(f"🤖 Calling ASI1 Mini with {intent} context...")
-        
-        # Generate AI response
+
+        # Generate AI response with tool calling support
         response = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": message}
             ],
             model="asi1-mini",
-            max_tokens=400,
-            temperature=0.7
+            max_tokens=600,
+            temperature=0.7,
+            tools=YIELD_TOOLS,
+            tool_choice="auto"
         )
 
-        ai_response = response.choices[0].message.content
-        print(f"✅ AI Response: {ai_response[:100]}...")
+        # Check if AI wants to call a tool
+        response_message = response.choices[0].message
+
+        if response_message.tool_calls:
+            print(f"🔧 AI requested tool call: {response_message.tool_calls[0].function.name}")
+
+            # Handle get_yield_pools tool call
+            tool_call = response_message.tool_calls[0]
+            function_name = tool_call.function.name
+            function_args = json.loads(tool_call.function.arguments)
+
+            if function_name == "get_yield_pools":
+                print(f"📊 Fetching yield pools with filters: {function_args}")
+
+                # Fetch all pools
+                all_pools = DeFiLlamaYields.get_all_pools()
+
+                if not all_pools:
+                    return jsonify({"response": "Sorry, I couldn't fetch yield pool data at the moment. Please try again later."}), 200
+
+                # Apply filters
+                filtered_pools = all_pools
+
+                # Filter by chain
+                chain = function_args.get('chain')
+                if chain and chain != 'all':
+                    filtered_pools = DeFiLlamaYields.filter_pools_by_chain(filtered_pools, chain)
+                    print(f"🔗 Filtered by chain '{chain}': {len(filtered_pools)} pools")
+
+                # Filter by token
+                token = function_args.get('token')
+                if token:
+                    filtered_pools = DeFiLlamaYields.filter_pools_by_token(filtered_pools, token)
+                    print(f"🪙 Filtered by token '{token}': {len(filtered_pools)} pools")
+
+                # Filter by pool type
+                pool_type = function_args.get('pool_type', 'all')
+                min_tvl = function_args.get('min_tvl', 100000)
+
+                if pool_type == 'stablecoin':
+                    filtered_pools = DeFiLlamaYields.get_stable_pools(filtered_pools, min_tvl=min_tvl)
+                    print(f"💵 Filtered stablecoin pools: {len(filtered_pools)} pools")
+                elif pool_type == 'high-apy':
+                    filtered_pools = DeFiLlamaYields.get_top_pools_by_apy(filtered_pools, limit=10, min_tvl=min_tvl)
+                    print(f"🚀 Top APY pools: {len(filtered_pools)} pools")
+                else:
+                    # Get top pools by APY
+                    filtered_pools = DeFiLlamaYields.get_top_pools_by_apy(filtered_pools, limit=10, min_tvl=min_tvl)
+
+                # Generate summary
+                pool_summary = DeFiLlamaYields.get_pools_summary(filtered_pools)
+
+                # Get AI analysis of the pools
+                ai_analysis = YieldAnalyzer.analyze_pools_with_ai(asi_key, filtered_pools, message)
+
+                final_response = pool_summary
+                if ai_analysis:
+                    final_response += f"\n\n**Analysis:**\n{ai_analysis}"
+
+                # Add data source footer
+                final_response += f"\n\n---\n📡 **Data Sources:** DeFiLlama API (live) • ASI:One Mini (analysis)"
+
+                # Build tools metadata
+                tools_used = [{
+                    "name": "get_yield_pools",
+                    "source": "DeFiLlama",
+                    "filters": function_args,
+                    "results_count": len(filtered_pools)
+                }]
+
+                print(f"✅ Returning {len(filtered_pools)} pools with AI analysis")
+                return jsonify({
+                    "response": final_response,
+                    "tools_used": tools_used
+                }), 200
+
+        # No tool call - return normal response
+        ai_response = response_message.content
+        print(f"✅ AI Response: {ai_response[:100] if ai_response else 'None'}...")
 
         return jsonify({"response": ai_response}), 200
 

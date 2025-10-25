@@ -98,6 +98,30 @@ class DeFiLlamaYields:
         return sorted(stable_pools, key=lambda x: x.get('apy', 0) or 0, reverse=True)
 
     @staticmethod
+    def get_safe_pools(pools: List[Dict[str, Any]], min_tvl: float = 1000000, min_apy: float = 7.0, max_apy: float = 15.0) -> List[Dict[str, Any]]:
+        """
+        Get safe yield pools with moderate APY and good TVL
+        Args:
+            pools: List of pools
+            min_tvl: Minimum TVL in USD (default 1M for safety)
+            min_apy: Minimum APY (default 7%)
+            max_apy: Maximum APY (default 15% to avoid risky pools)
+        """
+        safe_pools = []
+        for pool in pools:
+            apy_base = pool.get('apy', 0) or 0
+            apy_reward = pool.get('apyReward', 0) or 0
+            apy_total = apy_base + apy_reward
+            tvl = pool.get('tvlUsd', 0) or 0
+            
+            # Filter for safe APY range and good TVL
+            if min_apy <= apy_total <= max_apy and tvl >= min_tvl:
+                safe_pools.append(pool)
+        
+        # Sort by TVL (higher TVL = safer)
+        return sorted(safe_pools, key=lambda x: x.get('tvlUsd', 0) or 0, reverse=True)
+
+    @staticmethod
     def format_pool_info(pool: Dict[str, Any]) -> str:
         """Format pool information for display"""
         chain = pool.get('chain', 'Unknown')
@@ -225,8 +249,8 @@ YIELD_TOOLS = [
                     },
                     "pool_type": {
                         "type": "string",
-                        "description": "Type of pools: stablecoin (safer), high-apy (riskier), or all",
-                        "enum": ["stablecoin", "high-apy", "all"]
+                        "description": "Type of pools: safe (APY 7-15%, high TVL), stablecoin (safer), high-apy (riskier), or all",
+                        "enum": ["safe", "stablecoin", "high-apy", "all"]
                     }
                 },
                 "required": []

@@ -16,11 +16,34 @@ export interface SwapUI {
   estimated_gas: number;
 }
 
+export interface SendUI {
+  token: string;
+  token_name: string;
+  amount: number;
+  to_address: string;
+  network: string;
+  estimated_gas: number;
+  gas_symbol: string;
+  total_cost?: number;
+}
+
 export interface ToolUsed {
   name: string;
   source: string;
   filters?: any;
   results_count?: number;
+}
+
+export interface YieldPool {
+  pool_id: string;
+  project: string;
+  chain: string;
+  symbol: string;
+  apy_total: number;
+  apy_base: number;
+  apy_reward: number;
+  tvl: number;
+  url: string;
 }
 
 export interface Message {
@@ -30,7 +53,9 @@ export interface Message {
   timestamp: Date;
   attachments?: { name: string; url: string; type: string }[];
   swap_ui?: SwapUI;
+  send_ui?: SendUI;
   tools_used?: ToolUsed[];
+  yield_pools?: YieldPool[];
 }
 
 interface MessageProps {
@@ -255,6 +280,140 @@ export function ChatMessage({ message }: MessageProps) {
                 >
                   Cancel
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Send UI Component */}
+          {message.send_ui && (
+            <div className="mt-4 p-4 bg-background border-2 border-green-500 rounded-lg space-y-3">
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                <span className="text-sm font-bold text-green-500">Send Transaction</span>
+              </div>
+
+              {/* Token & Amount */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Amount</label>
+                <div className="flex items-center justify-between p-3 bg-card border border-border rounded">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <span className="text-xs font-bold text-green-500">{message.send_ui.token}</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{message.send_ui.token_name}</div>
+                      <div className="text-xs text-muted-foreground">{message.send_ui.network}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-green-500">{message.send_ui.amount}</div>
+                    <div className="text-xs text-muted-foreground">{message.send_ui.token}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recipient Address */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">To Address</label>
+                <div className="p-3 bg-card border border-border rounded">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <code className="text-xs font-mono break-all">{message.send_ui.to_address}</code>
+                  </div>
+                </div>
+              </div>
+
+              {/* Details */}
+              <div className="pt-2 space-y-1 border-t border-border">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Network</span>
+                  <span className="font-medium">{message.send_ui.network}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Estimated Gas</span>
+                  <span className="font-medium">{message.send_ui.estimated_gas} {message.send_ui.gas_symbol}</span>
+                </div>
+                {message.send_ui.total_cost && (
+                  <div className="flex justify-between text-xs font-semibold pt-1 border-t border-border">
+                    <span className="text-muted-foreground">Total Cost</span>
+                    <span className="text-foreground">{(message.send_ui.amount + message.send_ui.estimated_gas).toFixed(6)} {message.send_ui.token}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => alert('Send functionality coming soon! This will integrate with your wallet to complete the transaction.')}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white font-medium rounded hover:bg-green-700 transition-colors"
+                >
+                  Send
+                </button>
+                <button
+                  onClick={() => {/* Do nothing - just dismiss */}}
+                  className="px-4 py-2 border border-border text-foreground font-medium rounded hover:bg-secondary transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Yield Pools UI Component */}
+          {message.yield_pools && message.yield_pools.length > 0 && (
+            <div className="mt-4 p-4 bg-background border-2 border-primary rounded-lg space-y-3">
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-bold text-primary">Yield Pools</span>
+              </div>
+
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {message.yield_pools.map((pool, idx) => (
+                  <div key={idx} className="p-3 bg-card border border-border rounded-lg hover:border-primary transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-bold text-primary">{pool.project}</span>
+                          <span className="text-xs px-2 py-0.5 bg-primary/20 text-primary rounded">{pool.chain}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">{pool.symbol}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold text-primary">{pool.apy_total.toFixed(2)}%</div>
+                        <div className="text-xs text-muted-foreground">APY</div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                      <div>
+                        <span className="text-muted-foreground">Base:</span>
+                        <span className="ml-1 font-medium">{pool.apy_base.toFixed(2)}%</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Rewards:</span>
+                        <span className="ml-1 font-medium">{pool.apy_reward.toFixed(2)}%</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="text-muted-foreground">TVL:</span>
+                      <span className="font-medium">${pool.tvl.toLocaleString()}</span>
+                    </div>
+
+                    <button
+                      onClick={() => window.open(pool.url || '#', '_blank')}
+                      className="w-full px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded hover:bg-primary/90 transition-colors"
+                    >
+                      Invest
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           )}

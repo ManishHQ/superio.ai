@@ -174,6 +174,7 @@ def chat():
         from tools.defi_tools import CoinGeckoAPI, FearGreedIndexAPI, extract_recommendation, ASI1API
         from tools.yield_tools import DeFiLlamaYields, YieldAnalyzer, YIELD_TOOLS
         from agents.swap_agent import SwapParser
+        from agents.send_agent import SendParser
         from openai import OpenAI
         import json
 
@@ -190,61 +191,137 @@ def chat():
             base_url="https://api.asi1.ai/v1"
         )
 
-        # STEP 1: Classify intent using AI (including SWAP)
-        print(f"🔍 Classifying intent with AI...")
-        
+        # Define available tools/actions for the AI
+        AVAILABLE_TOOLS = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "send_token",
+                    "description": "Send cryptocurrency tokens to a wallet address. Use this when user wants to transfer/send/pay tokens.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "amount": {"type": "number", "description": "Amount to send"},
+                            "token": {"type": "string", "description": "Token symbol (ETH, SOL, USDC, etc.)"},
+                            "to_address": {"type": "string", "description": "Recipient wallet address"}
+                        },
+                        "required": ["amount", "token", "to_address"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "swap_token",
+                    "description": "Swap/exchange one cryptocurrency for another. Use this when user wants to swap/trade/convert tokens.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "from_amount": {"type": "number", "description": "Amount to swap"},
+                            "from_token": {"type": "string", "description": "Token to swap from"},
+                            "to_token": {"type": "string", "description": "Token to receive"}
+                        },
+                        "required": ["from_amount", "from_token", "to_token"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_crypto_info",
+                    "description": "Get cryptocurrency market data, prices, and analysis. Use for questions about crypto prices, market cap, trading advice.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "coin": {"type": "string", "description": "Cryptocurrency name or symbol"},
+                            "include_sentiment": {"type": "boolean", "description": "Include Fear & Greed Index"}
+                        },
+                        "required": ["coin"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "explain_transaction",
+                    "description": "Explain how blockchain transactions work, gas fees, confirmations, etc.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "topic": {"type": "string", "description": "Transaction topic to explain"}
+                        },
+                        "required": ["topic"]
+                    }
+                }
+            }
+        ]
+
+        # STEP 1: Let AI decide which tool/action to use
+        print(f"🤖 AI analyzing user request and selecting appropriate tools...")
+
         try:
-            classification_prompt = f"""You are classifying user messages into one of three categories.
+            system_prompt = """You are Superio, an advanced onchain intelligence AI assistant. You help users with cryptocurrency operations, market analysis, and blockchain education.
 
-User Message: "{message}"
+Available capabilities:
+- Send tokens to addresses
+- Swap/exchange tokens
+- Get cryptocurrency market data and analysis
+- Explain blockchain transactions and concepts
+- General conversation
 
-Categories:
-- SWAP: Requests to swap, exchange, trade, or convert tokens (e.g., "swap 5 sol for usdc", "exchange eth to usdc", "convert tokens")
-- CRYPTO: Specific cryptocurrency names (bitcoin, ethereum, etc.), price questions, trading advice, DeFi protocols, market analysis
-- GENERAL: Greetings ("hi", "hello", "hey"), casual conversation, questions about general topics, compliments, farewells
+When the user wants to perform an action (send, swap, etc.), call the appropriate function. For general questions, respond directly without calling functions."""
 
-IMPORTANT RULES:
-- Simple greetings like "hi", "hello", "how are you" → GENERAL
-- Questions without crypto keywords → GENERAL  
-- Keywords like "swap", "exchange", "trade", "convert" → SWAP
-- Only classify as CRYPTO if the message explicitly mentions cryptocurrency info without swap/exchange intent
-
-Respond with ONLY the word: SWAP, CRYPTO, or GENERAL"""
-
-            classification_response = client.chat.completions.create(
+            initial_response = client.chat.completions.create(
                 messages=[
-                    {"role": "system", "content": "You are an intent classifier. You respond with only one word: SWAP, CRYPTO, or GENERAL. Greetings and casual conversation are GENERAL. Swap/exchange requests are SWAP."},
-                    {"role": "user", "content": classification_prompt}
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": message}
                 ],
                 model="asi1-mini",
-                max_tokens=5,
-                temperature=0.1
+                tools=AVAILABLE_TOOLS + YIELD_TOOLS,
+                tool_choice="auto",
+                temperature=0.7,
+                max_tokens=600
             )
 
-            intent = classification_response.choices[0].message.content.strip().upper()
-            print(f"✅ AI classified intent as: {intent}")
+            response_message = initial_response.choices[0].message
+            tools_used = []
 
-        except Exception as e:
-            print(f"❌ Error in AI classification: {e}")
-            # Fallback classification - be very conservative
-            message_lower = message.lower().strip()
-            
-            # Check for swap intent first
-            if SwapParser.detect_swap_intent(message):
-                intent = "SWAP"
-            # Greetings should always be GENERAL
-            elif any(greeting in message_lower for greeting in ["hi", "hello", "hey", "good morning", "good afternoon", "good evening", "how are you", "what's up"]):
-                intent = "GENERAL"
-            # Only classify as CRYPTO if explicit crypto keywords
-            elif any(kw in message_lower for kw in ["bitcoin", "btc", "ethereum", "eth", "price", "trading", "defi", "crypto", "coin"]):
-                intent = "CRYPTO"
+            # Check if AI wants to call a tool
+            if response_message.tool_calls:
+                tool_call = response_message.tool_calls[0]
+                function_name = tool_call.function.name
+                function_args = json.loads(tool_call.function.arguments)
+
+                print(f"🔧 AI selected tool: {function_name} with args: {function_args}")
+
+                # Route to appropriate handler based on tool
+                if function_name == "send_token":
+            print(f"💸 Handling as SEND query...")
+
+            # Parse send request using SendParser
+            send_data = SendParser.parse_send_request(message)
+            if send_data:
+                print(f"✅ Send parsed: {send_data['amount']} {send_data['token']} to {send_data['to_address'][:10]}...")
+                send_response = SendParser.generate_send_response(send_data)
+                return jsonify(send_response), 200
             else:
-                intent = "GENERAL"
-                
-            print(f"⚠️ Using fallback classification: {intent}")
+                # Couldn't parse send details, provide general guidance
+                print(f"⚠️ Could not parse send details")
+                response_text = """I'd be happy to help you send tokens! To perform a send transaction, please specify:
 
-        # STEP 2: Route based on intent
-        if intent == "SWAP":
+- **Amount**: How much you want to send (e.g., 0.01, 5, 100)
+- **Token**: What token to send (e.g., ETH, SOL, USDC)
+- **Address**: The recipient's wallet address
+
+Example: "send 0.01 eth to 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb"
+
+**Supported tokens:** SOL, USDC, USDT, ETH, BTC, BONK, WIF, JUP, DAI, MATIC, AVAX, LINK
+
+Would you like to try again with specific details?"""
+
+                return jsonify({"response": response_text}), 200
+
+        elif intent == "SWAP":
             print(f"🔄 Handling as SWAP query...")
             
             # Parse swap request using SwapParser
@@ -378,7 +455,10 @@ Would you like to try again with specific details?"""
                 pool_type = function_args.get('pool_type', 'all')
                 min_tvl = function_args.get('min_tvl', 100000)
 
-                if pool_type == 'stablecoin':
+                if pool_type == 'safe':
+                    filtered_pools = DeFiLlamaYields.get_safe_pools(filtered_pools, min_tvl=min_tvl, min_apy=7.0, max_apy=15.0)
+                    print(f"🛡️ Filtered safe pools (APY 7-15%): {len(filtered_pools)} pools")
+                elif pool_type == 'stablecoin':
                     filtered_pools = DeFiLlamaYields.get_stable_pools(filtered_pools, min_tvl=min_tvl)
                     print(f"💵 Filtered stablecoin pools: {len(filtered_pools)} pools")
                 elif pool_type == 'high-apy':
@@ -409,10 +489,30 @@ Would you like to try again with specific details?"""
                     "results_count": len(filtered_pools)
                 }]
 
+                # Prepare pools data for UI
+                pools_ui = []
+                for pool in filtered_pools[:10]:  # Limit to 10 pools for UI
+                    apy_base = pool.get('apy', 0) or 0
+                    apy_reward = pool.get('apyReward', 0) or 0
+                    apy_total = apy_base + apy_reward
+                    
+                    pools_ui.append({
+                        "pool_id": pool.get('pool', ''),
+                        "project": pool.get('project', 'Unknown'),
+                        "chain": pool.get('chain', 'Unknown'),
+                        "symbol": pool.get('symbol', 'Unknown'),
+                        "apy_total": round(apy_total, 2),
+                        "apy_base": round(apy_base, 2),
+                        "apy_reward": round(apy_reward, 2),
+                        "tvl": round(pool.get('tvlUsd', 0) or 0, 0),
+                        "url": pool.get('url', ''),
+                    })
+
                 print(f"✅ Returning {len(filtered_pools)} pools with AI analysis")
                 return jsonify({
                     "response": final_response,
-                    "tools_used": tools_used
+                    "tools_used": tools_used,
+                    "yield_pools": pools_ui
                 }), 200
 
         # No tool call - return normal response

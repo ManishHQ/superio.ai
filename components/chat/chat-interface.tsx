@@ -70,7 +70,9 @@ export function ChatInterface() {
         content: data.response,
         timestamp: new Date(),
         ...(data.swap_ui && { swap_ui: data.swap_ui }),
+        ...(data.send_ui && { send_ui: data.send_ui }),
         ...(data.tools_used && { tools_used: data.tools_used }),
+        ...(data.yield_pools && { yield_pools: data.yield_pools }),
       };
 
       setMessages((prev) => [...prev, aiMessage]);

@@ -62,13 +62,14 @@ export function ChatInterface() {
       }
 
       const data = await response.json();
-      
+
       // Create AI response message
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: data.response,
         timestamp: new Date(),
+        ...(data.swap_ui && { swap_ui: data.swap_ui }),
       };
 
       setMessages((prev) => [...prev, aiMessage]);

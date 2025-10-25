@@ -4,12 +4,33 @@ import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+export interface SwapUI {
+  from_token: string;
+  from_token_name: string;
+  from_amount: number;
+  to_token: string;
+  to_token_name: string;
+  to_amount: number;
+  exchange_rate: number;
+  slippage: number;
+  estimated_gas: number;
+}
+
+export interface ToolUsed {
+  name: string;
+  source: string;
+  filters?: any;
+  results_count?: number;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
   attachments?: { name: string; url: string; type: string }[];
+  swap_ui?: SwapUI;
+  tools_used?: ToolUsed[];
 }
 
 interface MessageProps {
@@ -106,6 +127,97 @@ export function ChatMessage({ message }: MessageProps) {
                   </span>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Swap UI Component */}
+          {message.swap_ui && (
+            <div className="mt-4 p-4 bg-background border-2 border-primary rounded-lg space-y-3">
+              <div className="flex items-center gap-2 mb-3">
+                <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                </svg>
+                <span className="text-sm font-bold text-primary">Swap Preview</span>
+              </div>
+
+              {/* From Token */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">From</label>
+                <div className="flex items-center justify-between p-3 bg-card border border-border rounded">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                      <span className="text-xs font-bold text-primary">{message.swap_ui.from_token}</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{message.swap_ui.from_token_name}</div>
+                      <div className="text-xs text-muted-foreground">{message.swap_ui.from_token}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold">{message.swap_ui.from_amount}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Arrow Down */}
+              <div className="flex justify-center">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* To Token */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">To (Estimated)</label>
+                <div className="flex items-center justify-between p-3 bg-card border border-border rounded">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                      <span className="text-xs font-bold text-primary">{message.swap_ui.to_token}</span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{message.swap_ui.to_token_name}</div>
+                      <div className="text-xs text-muted-foreground">{message.swap_ui.to_token}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-primary">{message.swap_ui.to_amount.toFixed(2)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Details */}
+              <div className="pt-2 space-y-1 border-t border-border">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Exchange Rate</span>
+                  <span className="font-medium">1 {message.swap_ui.from_token} = {message.swap_ui.exchange_rate.toFixed(2)} {message.swap_ui.to_token}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Slippage Tolerance</span>
+                  <span className="font-medium">{message.swap_ui.slippage}%</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Estimated Gas</span>
+                  <span className="font-medium">{message.swap_ui.estimated_gas} SOL</span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => alert('Swap functionality coming soon! This will integrate with your wallet.')}
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground font-medium rounded hover:bg-primary/90 transition-colors"
+                >
+                  Swap
+                </button>
+                <button
+                  onClick={() => {/* Do nothing - just dismiss */}}
+                  className="px-4 py-2 border border-border text-foreground font-medium rounded hover:bg-secondary transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>

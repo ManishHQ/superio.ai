@@ -172,6 +172,7 @@ def chat():
 
         # Import tools
         from tools.defi_tools import CoinGeckoAPI, FearGreedIndexAPI, extract_recommendation, ASI1API
+        from agents.swap_agent import SwapParser
         from openai import OpenAI
 
         # Get ASI API key
@@ -180,6 +181,15 @@ def chat():
 
         if not asi_key or asi_key == "your_asi_api_key_here":
             return jsonify({"error": "ASI API key not configured"}), 500
+
+        # STEP 0: Check for swap intent FIRST (before AI classification)
+        print(f"🔄 Checking for swap intent...")
+        if SwapParser.detect_swap_intent(message):
+            swap_data = SwapParser.parse_swap_request(message)
+            if swap_data:
+                print(f"✅ Swap detected: {swap_data['from_amount']} {swap_data['from_token']} -> {swap_data['to_token']}")
+                swap_response = SwapParser.generate_swap_response(swap_data)
+                return jsonify(swap_response), 200
 
         # Initialize OpenAI client
         client = OpenAI(

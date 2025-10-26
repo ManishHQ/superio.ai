@@ -1,66 +1,83 @@
-## Foundry
+# Superio Swap Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Demo smart contracts for swapping ETH to FET tokens on Ethereum Sepolia testnet.
 
-Foundry consists of:
+## Contracts
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+1. **FETToken.sol** - ERC-20 token representing Fetch.ai's FET token
+2. **SimpleSwap.sol** - Simple swap contract that exchanges ETH for FET at a fixed rate
 
-## Documentation
+## Exchange Rate
 
-https://book.getfoundry.sh/
+- **1 ETH = 1,000 FET**
+- Fixed rate for demonstration purposes
+
+## Prerequisites
+
+1. MetaMask or compatible wallet
+2. Sepolia ETH for gas fees
+3. Private key for deployment
+
+## Setup
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Configure environment variables in `../server/.env`:
+```
+PRIVATE_KEY=your_private_key_here
+SEPOLIA_RPC_URL=https://rpc.sepolia.org
+ETHERSCAN_API_KEY=your_etherscan_api_key (optional)
+```
+
+3. Compile contracts:
+```bash
+npm run compile
+```
+
+4. Deploy to Sepolia:
+```bash
+npm run deploy:sepolia
+```
 
 ## Usage
 
-### Build
+Once deployed, you can swap ETH for FET by calling:
 
-```shell
-$ forge build
+```solidity
+simpleSwap.swapETHforFET{value: amountInWei}()
 ```
 
-### Test
+The contract will automatically:
+1. Accept your ETH
+2. Calculate FET amount based on exchange rate
+3. Transfer FET tokens to your address
 
-```shell
-$ forge test
+## Contract Addresses
+
+After deployment, update these in your frontend:
+- FET Token Address
+- SimpleSwap Address
+
+## Frontend Integration
+
+To use in your frontend with wagmi:
+
+```typescript
+import { useContractWrite, usePrepareContractWrite } from 'wagmi'
+
+const { config } = usePrepareContractWrite({
+  address: '0x...', // SimpleSwap address
+  abi: [...], // SimpleSwap ABI
+  functionName: 'swapETHforFET',
+  value: ethers.utils.parseEther('0.1'), // Amount in ETH
+})
+
+const { write } = useContractWrite(config)
 ```
 
-### Format
+## Security
 
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+⚠️ **For Demonstration Only** - This contract is for demo purposes and should not be used in production without proper auditing and security measures.

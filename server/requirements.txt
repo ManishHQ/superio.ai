@@ -10,6 +10,7 @@ python-dotenv==1.0.1
 # HTTP & API
 requests==2.32.3
 aiohttp==3.11.11
+httpx==0.28.1
 
 # AI/LLM
 openai>=1.0.0

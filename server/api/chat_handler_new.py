@@ -388,14 +388,22 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                     # Build response
                     response_text = f"📊 **Address Analytics: {address}**\n\n"
                     
-                    # Basic info
-                    if address_info:
-                        balance_wei = address_info.get('balance', 0)
+                    # Basic info - extract from nested structure
+                    if address_info and 'data' in address_info and 'basic_info' in address_info['data']:
+                        basic_info = address_info['data']['basic_info']
+                        balance_wei = basic_info.get('coin_balance', 0)
                         balance_eth = int(balance_wei) / 1e18 if balance_wei else 0
-                        tx_count = address_info.get('transaction_count', 0)
+                        has_tokens = basic_info.get('has_tokens', False)
+                        is_contract = basic_info.get('is_contract', False)
+                        has_token_transfers = basic_info.get('has_token_transfers', False)
                         
                         response_text += f"**Balance:** {balance_eth:.6f} ETH\n"
-                        response_text += f"**Transaction Count:** {tx_count:,}\n\n"
+                        response_text += f"**Type:** {'Contract' if is_contract else 'Wallet'}\n"
+                        if has_tokens:
+                            response_text += f"**Has Tokens:** Yes\n"
+                        if has_token_transfers:
+                            response_text += f"**Has Token Transfers:** Yes\n"
+                        response_text += "\n"
                     
                     # Token holdings
                     if tokens and len(tokens) > 0:

@@ -1,13 +1,78 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useAccount, useEnsName, useBalance } from 'wagmi';
 import { Button } from '@/components/ui/button';
 import { WalletConnection } from '@/components/wallet-connection';
+import { API_ENDPOINTS } from '@/lib/config';
+
+interface OnChainReputation {
+  tier: string;
+  score: number;
+  transactions: number;
+  tokenTransfers: number;
+  totalInteractions: number;
+  uniqueTokens: number;
+  contributingFactors: string[];
+}
 
 export default function ProfilePage() {
   const { address, isConnected, chain } = useAccount();
   const { data: ensName } = useEnsName({ address });
   const { data: balance } = useBalance({ address });
+  const [reputation, setReputation] = useState<OnChainReputation | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch on-chain reputation
+  useEffect(() => {
+    if (!address) return;
+
+    const fetchReputation = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(API_ENDPOINTS.chat, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            message: `analyze address ${address}`,
+            user_id: address
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Extract reputation from response
+          const responseText = data.response || '';
+          
+          // Parse the response to extract reputation data
+          const tierMatch = responseText.match(/\*\*Tier:\*\* ([^\n]+)/);
+          const scoreMatch = responseText.match(/\*\*Score:\*\* (\d+)\/100/);
+          const txMatch = responseText.match(/Total Transactions: \*\*(\d+)\*\*/);
+          const tokenTxMatch = responseText.match(/Token Transfers: \*\*(\d+)\*\*/);
+          const interactionsMatch = responseText.match(/Total Interactions: \*\*(\d+)\*\*/);
+          const tokensMatch = responseText.match(/Unique Tokens Held: \*\*(\d+)\*\*/);
+
+          if (tierMatch || scoreMatch) {
+            setReputation({
+              tier: tierMatch ? tierMatch[1] : 'Unknown',
+              score: scoreMatch ? parseInt(scoreMatch[1]) : 0,
+              transactions: txMatch ? parseInt(txMatch[1]) : 0,
+              tokenTransfers: tokenTxMatch ? parseInt(tokenTxMatch[1]) : 0,
+              totalInteractions: interactionsMatch ? parseInt(interactionsMatch[1]) : 0,
+              uniqueTokens: tokensMatch ? parseInt(tokensMatch[1]) : 0,
+              contributingFactors: []
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch reputation:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReputation();
+  }, [address]);
 
   if (!isConnected) {
     return (
@@ -92,6 +157,81 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* On-Chain Reputation */}
+        <div className="bg-card border-2 border-primary rounded-lg shadow-xl p-6">
+          <h2 className="text-xl font-bold text-foreground mb-6">On-Chain Reputation</h2>
+
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <span className="ml-3 text-muted-foreground">Loading reputation...</span>
+            </div>
+          ) : reputation ? (
+            <div className="space-y-6">
+              {/* Reputation Score */}
+              <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-6 border-2 border-primary">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                      Reputation Score
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <div className="text-4xl font-bold text-primary">{reputation.score}</div>
+                      <div className="text-muted-foreground">/100</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl">{reputation.tier}</div>
+                    <div className="text-xs text-muted-foreground mt-1">Tier</div>
+                  </div>
+                </div>
+                
+                {/* Progress bar */}
+                <div className="w-full bg-secondary/50 rounded-full h-3 overflow-hidden">
+                  <div 
+                    className="bg-gradient-to-r from-primary to-primary/80 h-full transition-all duration-500"
+                    style={{ width: `${reputation.score}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-secondary rounded-lg p-4 border border-border text-center">
+                  <div className="text-2xl font-bold text-primary">{reputation.transactions}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Transactions</div>
+                </div>
+                
+                <div className="bg-secondary rounded-lg p-4 border border-border text-center">
+                  <div className="text-2xl font-bold text-primary">{reputation.tokenTransfers}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Token Transfers</div>
+                </div>
+                
+                <div className="bg-secondary rounded-lg p-4 border border-border text-center">
+                  <div className="text-2xl font-bold text-primary">{reputation.totalInteractions}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Total Actions</div>
+                </div>
+                
+                <div className="bg-secondary rounded-lg p-4 border border-border text-center">
+                  <div className="text-2xl font-bold text-primary">{reputation.uniqueTokens}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Unique Tokens</div>
+                </div>
+              </div>
+
+              {/* Tier Description */}
+              <div className="bg-secondary/50 rounded-lg p-4 border border-border">
+                <p className="text-sm text-muted-foreground">
+                  Your on-chain reputation is calculated based on your blockchain activity, transaction history, token holdings, and DeFi participation. Maintain consistent activity to improve your score!
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              No on-chain data available yet. Start using the blockchain to build your reputation!
+            </div>
+          )}
         </div>
 
         {/* Preferences */}

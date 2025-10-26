@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { SendTransaction } from './send-transaction';
+import { API_ENDPOINTS } from '@/lib/config';
 
 export interface SwapUI {
   from_token: string;
@@ -155,16 +156,37 @@ export function ChatMessage({ message }: MessageProps) {
               {message.tools_used
                 .filter(tool => tool.chart_url)
                 .map((tool, idx) => (
-                  <div key={idx} className="rounded-lg overflow-hidden border-2 border-primary">
-                    <img
-                      src={tool.chart_url}
-                      alt="Chart Analysis"
-                      className="w-full h-auto"
-                      onError={(e) => {
-                        console.error('Failed to load chart image:', tool.chart_url);
-                        e.currentTarget.style.display = 'none';
-                      }}
-                    />
+                  <div key={idx} className="rounded-lg overflow-hidden border-2 border-primary bg-background">
+                    <div className="relative w-full">
+                      <img
+                        src={tool.chart_url}
+                        alt="Chart Analysis"
+                        className="w-full h-auto block"
+                        onError={(e) => {
+                          console.error('❌ Failed to load chart image from:', tool.chart_url);
+                          console.error('Error details:', e);
+                          // Don't hide, show error message
+                          const img = e.currentTarget;
+                          img.style.display = 'none';
+                          
+                          // Create error message
+                          let errorDiv = img.nextElementSibling as HTMLElement;
+                          if (!errorDiv || !errorDiv.classList.contains('chart-error')) {
+                            errorDiv = document.createElement('div');
+                            errorDiv.className = 'chart-error p-6 text-center bg-destructive/10 border border-destructive rounded';
+                            img.parentElement?.appendChild(errorDiv);
+                          }
+                          errorDiv.innerHTML = `
+                            <div class="text-destructive font-semibold mb-2">Failed to load chart</div>
+                            <div class="text-xs text-muted-foreground">URL: ${tool.chart_url}</div>
+                            <div class="text-xs text-muted-foreground mt-1">Check browser console for details</div>
+                          `;
+                        }}
+                        onLoad={(e) => {
+                          console.log('✅ Chart image loaded successfully:', tool.chart_url);
+                        }}
+                      />
+                    </div>
                     {tool.recommendation && (
                       <div className="px-4 py-2 bg-primary/10 border-t-2 border-primary flex items-center justify-between">
                         <span className="text-xs font-semibold text-muted-foreground">Recommendation:</span>

@@ -24,11 +24,15 @@ graph TB
     end
 
     subgraph "AI Agents Layer"
-        AI_AGENT[ASI1-Mini LLM]
-        SWAP_AGENT[Swap Agent<br/>intent detection & parsing]
+        AI_AGENT[ASI1-Mini LLM<br/>Main Orchestrator]
+        COORDINATOR_AGENT[Coordinator Agent<br/>Task Routing]
+        SWAP_AGENT[Swap Agent<br/>swap intent detection]
         SEND_AGENT[Send Agent<br/>transaction parsing]
         TRADING_AGENT[Trading Agent<br/>chart analysis]
         BLOCKSCOUT_AGENT[Blockscout Agent<br/>on-chain data]
+        DEFI_AGENT[DeFi Agent<br/>DeFi queries]
+        COIN_AGENT[Coin Agent<br/>crypto info]
+        FGI_AGENT[FGI Agent<br/>market sentiment]
     end
 
     subgraph "Tools Layer"
@@ -39,7 +43,7 @@ graph TB
     end
 
     subgraph "Smart Contracts"
-        SWAP_CONTRACT[SimpleSwap Contract<br/>Sepolia]
+        SWAP_CONTRACT[Swap Contract<br/>Sepolia]
         FET_TOKEN[FET Token Contract<br/>ERC-20]
     end
 
@@ -68,10 +72,14 @@ graph TB
     %% Backend Processing
     SERVER --> CHAT_HANDLER
     CHAT_HANDLER --> AI_AGENT
-    CHAT_HANDLER --> SWAP_AGENT
-    CHAT_HANDLER --> SEND_AGENT
-    CHAT_HANDLER --> TRADING_AGENT
-    CHAT_HANDLER --> BLOCKSCOUT_AGENT
+    AI_AGENT --> COORDINATOR_AGENT
+    COORDINATOR_AGENT --> SWAP_AGENT
+    COORDINATOR_AGENT --> SEND_AGENT
+    COORDINATOR_AGENT --> TRADING_AGENT
+    COORDINATOR_AGENT --> BLOCKSCOUT_AGENT
+    COORDINATOR_AGENT --> DEFI_AGENT
+    COORDINATOR_AGENT --> COIN_AGENT
+    COORDINATOR_AGENT --> FGI_AGENT
     
     %% AI Decision Making
     AI_AGENT --> ACTION_TOOLS
@@ -85,6 +93,9 @@ graph TB
     TRADING_AGENT --> CHART_IMG
     TRADING_AGENT --> GEMINI
     BLOCKSCOUT_AGENT --> BLOCKSCOUT_API
+    DEFI_AGENT --> COINGECKO
+    COIN_AGENT --> COINGECKO
+    FGI_AGENT --> COINGECKO
     
     %% Tools to External APIs
     DEFI_TOOLS --> COINGECKO
@@ -215,6 +226,63 @@ sequenceDiagram
 
 ---
 
+### 5. Coordinator Agent
+**Purpose**: Route tasks to appropriate specialized agents
+
+**Input**: User intent classification
+**Process**:
+1. Analyze request type
+2. Determine required data sources
+3. Dispatch to appropriate agents
+4. Aggregate responses
+5. Return unified result
+
+**Output**: Coordinated multi-agent response
+
+---
+
+### 6. DeFi Agent
+**Purpose**: Handle DeFi-specific queries
+
+**Input**: DeFi-related questions
+**Process**:
+1. Query DeFi data from CoinGecko
+2. Analyze yield farming opportunities
+3. Provide liquidity pool information
+4. Calculate APY and risks
+
+**Output**: DeFi analytics and recommendations
+
+---
+
+### 7. Coin Agent
+**Purpose**: Provide cryptocurrency information
+
+**Input**: Coin name or symbol
+**Process**:
+1. Fetch coin data from CoinGecko
+2. Get price, market cap, volume
+3. Analyze price trends
+4. Provide market insights
+
+**Output**: Cryptocurrency information and market data
+
+---
+
+### 8. FGI Agent (Fear & Greed Index)
+**Purpose**: Analyze market sentiment
+
+**Input**: General market queries
+**Process**:
+1. Fetch Fear & Greed Index
+2. Calculate sentiment score
+3. Correlate with market trends
+4. Provide sentiment analysis
+
+**Output**: Market sentiment indicators and analysis
+
+---
+
 ## Data Flow Architecture
 
 ```mermaid
@@ -225,7 +293,10 @@ graph LR
         C -->|Swap| D[Swap Agent]
         C -->|Send| E[Send Agent]
         C -->|Chart| F[Trading Agent]
-        C -->|Query| G[Blockscout Agent]
+        C -->|On-chain| G[Blockscout Agent]
+        C -->|DeFi| H1[DeFi Agent]
+        C -->|Crypto Info| H2[Coin Agent]
+        C -->|Sentiment| H3[FGI Agent]
         C -->|Yield| H[Yield Tools]
         C -->|General| I[Direct AI Response]
     end
@@ -237,6 +308,9 @@ graph LR
         F --> M[Chart-IMG API]
         F --> N[Gemini Vision]
         G --> O[Blockscout MCP]
+        H1 --> K
+        H2 --> K
+        H3 --> AA1[Alternative.me API]
         H --> P[DeFiLlama API]
         H --> Q[MeTTa Knowledge Base]
     end
@@ -247,6 +321,9 @@ graph LR
         M --> T[Chart Image]
         N --> U[Analysis Text]
         O --> V[Transaction Details]
+        H1 --> BB1[DeFi Analytics]
+        H2 --> BB2[Crypto Info]
+        H3 --> BB3[Sentiment Score]
         P --> W[Yield Pools Graph]
         Q --> W
     end

@@ -269,7 +269,7 @@ Be confident and specific in your analysis. Use technical trading terms and prov
             # Convert local path to URL
             chart_url = chart_path  # Keep as-is for now, will be converted in chat_handler
             filename = os.path.basename(chart_path)
-            api_url = os.getenv("API_URL", "https://superio-c0e1ce720dee.herokuapp.com")
+            api_url = "https://superio-c0e1ce720dee.herokuapp.com"
             chart_url = f"{api_url}/api/chart/{filename}"
             
             result = {

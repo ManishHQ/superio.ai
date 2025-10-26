@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract SimpleSwap is ReentrancyGuard {
     // FET Token contract
@@ -25,8 +25,9 @@ contract SimpleSwap is ReentrancyGuard {
         uint256 amount
     );
     
-    constructor(address _fetToken) {
+    constructor(address _fetToken) ReentrancyGuard() {
         FETToken = ERC20(_fetToken);
+        owner = msg.sender;
     }
     
     /**

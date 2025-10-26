@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract FETToken is ERC20, Ownable {
-    constructor() ERC20("Fetch.ai", "FET") {
+    constructor() ERC20("Fetch.ai", "FET") Ownable(msg.sender) {
         // Mint 10 million FET tokens
         _mint(msg.sender, 10_000_000 * 10**decimals());
     }

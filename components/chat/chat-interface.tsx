@@ -101,7 +101,7 @@ export function ChatInterface() {
         },
         body: JSON.stringify({
           message: content,
-          user_id: address || 'web_user',
+          user_id: address || 'anonymous',
         }),
       });
 

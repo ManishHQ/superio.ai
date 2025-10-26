@@ -20,6 +20,8 @@ def handle_chat_request(message, user_id, client, asi_key, context=""):
     from tools.action_tools import ACTION_TOOLS
     from agents.swap_agent import SwapParser
     from agents.send_agent import SendParser
+    from agents.trading_agent import TradingAgent
+    import os
     import json
 
     print(f"\n🤖 AI-driven request handling for: {message[:50]}...")
@@ -31,9 +33,12 @@ CRITICAL: When users ask to send, transfer, or pay tokens, you MUST call the sen
 
 Similarly, for swaps/exchanges, ALWAYS call swap_token to show the swap UI.
 
+For chart analysis, ALWAYS call analyze_chart when user asks about charts, technical analysis, or trading signals. Use defaults: BINANCE exchange and 1D timeframe unless user specifies otherwise. DO NOT ask for more details - just analyze the chart immediately.
+
 Your capabilities:
 - **send_token**: Prepare send/transfer transactions for wallet signing (ALWAYS use this for send requests)
 - **swap_token**: Prepare token swap transactions for wallet signing (ALWAYS use this for swap requests)
+- **analyze_chart**: Analyze cryptocurrency or stock charts (DEFAULT: BINANCE, 1D timeframe - use these if not specified)
 - **get_crypto_info**: Get market data, prices, and analysis
 - **get_yield_pools**: Find and analyze DeFi yield farming opportunities
 - **explain_transaction**: Explain how blockchain transactions work
@@ -84,14 +89,17 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
 
             # Route to appropriate handler
             if function_name == "send_token":
+                # Default to ETH on Sepolia if token not specified
+                token = function_args.get("token", "ETH") or "ETH"
+
                 # Build send UI from AI-extracted params
                 send_data = {
-                    "token": function_args["token"].upper(),
-                    "token_name": SendParser.TOKENS.get(function_args["token"].lower(), {}).get("name", function_args["token"]),
+                    "token": token.upper(),
+                    "token_name": SendParser.TOKENS.get(token.lower(), {}).get("name", "Ethereum"),
                     "amount": function_args["amount"],
                     "to_address": function_args["to_address"],
-                    "network": SendParser.TOKENS.get(function_args["token"].lower(), {}).get("network", "Unknown"),
-                    "decimals": SendParser.TOKENS.get(function_args["token"].lower(), {}).get("decimals", 18),
+                    "network": "Ethereum Sepolia",  # Default to Sepolia testnet
+                    "decimals": SendParser.TOKENS.get(token.lower(), {}).get("decimals", 18),
                     "estimated_gas": 0.001,
                     "gas_symbol": "ETH"
                 }
@@ -175,15 +183,86 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                     "tools_used": tools_used
                 }
 
+            elif function_name == "analyze_chart":
+                # Handle chart analysis using trading agent
+                symbol = function_args.get("symbol", "").upper()
+                # Default to BINANCE if not specified
+                exchange = function_args.get("exchange", "BINANCE") or "BINANCE"
+                # Default to 1D (daily) chart if not specified
+                interval = function_args.get("interval", "1D") or "1D"
+                
+                # Get Chart-IMG API key
+                chart_api_key = os.getenv("CHART_IMG_API_KEY")
+                
+                print(f"🔍 Chart analysis request:")
+                print(f"   Symbol: {symbol}")
+                print(f"   Exchange: {exchange}")
+                print(f"   Interval: {interval}")
+                print(f"   API Key present: {bool(chart_api_key and chart_api_key != 'your_chart_img_api_key_here')}")
+                
+                # Create trading agent
+                trading_agent = TradingAgent(asi_client=client, chart_api_key=chart_api_key)
+                
+                # Analyze chart
+                chart_result = trading_agent.analyze_symbol(
+                    symbol=symbol,
+                    interval=interval,
+                    exchange=exchange
+                )
+
+                print(f"🔍 Chart result keys: {chart_result.keys() if chart_result else 'None'}")
+                print(f"🔍 Chart result error: {chart_result.get('error') if chart_result else 'No result'}")
+
+                # Convert local file path to URL
+                chart_url = None
+                if chart_result.get("chart_url") and not chart_result.get("error"):
+                    import os
+                    filename = os.path.basename(chart_result["chart_url"])
+                    chart_url = f"http://localhost:5001/api/chart/{filename}"
+                    print(f"📸 Converted chart path to URL: {chart_url}")
+
+                # Update tools_used
+                tools_used[0]["source"] = "Chart-IMG API & AI Vision Analysis"
+                tools_used[0]["chart_url"] = chart_url
+                tools_used[0]["recommendation"] = chart_result.get("recommendation")
+                
+                # Build response with chart
+                response = f"📊 **Chart Analysis: {symbol}**\n\n"
+
+                if chart_result.get("error"):
+                    response += f"❌ Error: {chart_result.get('error')}"
+                else:
+                    response += chart_result.get("analysis", "Analysis generated.")
+
+                    if chart_url:
+                        response += f"\n\n📈 [View Chart Image]({chart_url})"
+
+                    recommendation = chart_result.get("recommendation", "HOLD")
+                    if recommendation == "BUY":
+                        response += f"\n\n🟢 **Recommendation: {recommendation}**"
+                    elif recommendation == "SELL":
+                        response += f"\n\n🔴 **Recommendation: {recommendation}**"
+                    else:
+                        response += f"\n\n🟡 **Recommendation: {recommendation}**"
+                
+                return {
+                    "response": response,
+                    "tools_used": tools_used,
+                    "chart_url": chart_result.get("chart_url"),
+                    "chart_analysis": chart_result.get("analysis")
+                }
+            
             elif function_name == "get_yield_pools":
                 # Handle yield pools (existing logic)
                 all_pools = DeFiLlamaYields.get_all_pools()
                 if not all_pools:
                     return {"response": "Sorry, couldn't fetch yield data.", "tools_used": tools_used}
 
-                # Apply filters from AI
+                # Apply filters from AI with smart defaults
                 filtered_pools = all_pools
-                chain = function_args.get('chain')
+
+                # Default to Ethereum unless specified
+                chain = function_args.get('chain', 'ethereum') or 'ethereum'
                 if chain and chain != 'all':
                     filtered_pools = DeFiLlamaYields.filter_pools_by_chain(filtered_pools, chain)
 
@@ -191,15 +270,20 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                 if token:
                     filtered_pools = DeFiLlamaYields.filter_pools_by_token(filtered_pools, token)
 
-                pool_type = function_args.get('pool_type', 'all')
-                min_tvl = function_args.get('min_tvl', 100000)
+                # Default to safe pools (APY 7-15%, TVL 20M+)
+                pool_type = function_args.get('pool_type', 'safe') or 'safe'
+                min_tvl = function_args.get('min_tvl', 20000000) or 20000000
 
-                if pool_type == 'stablecoin':
+                if pool_type == 'safe':
+                    # Safe pools: APY 7-15%, high TVL (20M+)
+                    filtered_pools = DeFiLlamaYields.get_safe_pools(filtered_pools, min_tvl=min_tvl)
+                elif pool_type == 'stablecoin':
                     filtered_pools = DeFiLlamaYields.get_stable_pools(filtered_pools, min_tvl=min_tvl)
                 elif pool_type == 'high-apy':
                     filtered_pools = DeFiLlamaYields.get_top_pools_by_apy(filtered_pools, limit=10, min_tvl=min_tvl)
                 else:
-                    filtered_pools = DeFiLlamaYields.get_top_pools_by_apy(filtered_pools, limit=10, min_tvl=min_tvl)
+                    # Fallback to safe pools
+                    filtered_pools = DeFiLlamaYields.get_safe_pools(filtered_pools, min_tvl=min_tvl)
 
                 # Generate summary
                 pool_summary = DeFiLlamaYields.get_pools_summary(filtered_pools)

@@ -1,23 +1,35 @@
 """
-Action Tools - Definitions for AI function calling
-These tools are presented to the AI so it can decide which actions to take
+Action Tools - AI function definitions for transaction and chart operations
 """
 
-# Define available tools/actions for the AI to choose from
+# Import existing tools
+import json
+
+# Swap and Send tools (existing)
 ACTION_TOOLS = [
     {
         "type": "function",
         "function": {
             "name": "send_token",
-            "description": "Send cryptocurrency tokens to a wallet address. Use this when user wants to transfer/send/pay tokens to someone.",
+            "description": "Prepare a token send/transfer transaction for wallet signing on Ethereum Sepolia testnet (default network). Use this when user wants to send tokens to someone.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "amount": {"type": "number", "description": "Amount of tokens to send"},
-                    "token": {"type": "string", "description": "Token symbol (ETH, SOL, USDC, BTC, etc.)"},
-                    "to_address": {"type": "string", "description": "Recipient wallet address (0x... for Ethereum, base58 for Solana, etc.)"}
+                    "token": {
+                        "type": "string",
+                        "description": "Token symbol (default: 'ETH' for Ethereum on Sepolia testnet). Can also be 'USDC', 'USDT', etc.",
+                        "default": "ETH"
+                    },
+                    "amount": {
+                        "type": "number",
+                        "description": "Amount to send"
+                    },
+                    "to_address": {
+                        "type": "string",
+                        "description": "Recipient Ethereum wallet address (0x... format for Sepolia testnet)"
+                    }
                 },
-                "required": ["amount", "token", "to_address"]
+                "required": ["amount", "to_address"]
             }
         }
     },
@@ -25,44 +37,53 @@ ACTION_TOOLS = [
         "type": "function",
         "function": {
             "name": "swap_token",
-            "description": "Swap/exchange one cryptocurrency for another. Use this when user wants to swap/trade/convert/exchange tokens.",
+            "description": "Prepare a token swap/exchange transaction for wallet signing. Use this when user wants to swap/exchange one token for another.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "from_amount": {"type": "number", "description": "Amount of tokens to swap from"},
-                    "from_token": {"type": "string", "description": "Token symbol to swap from (SOL, ETH, USDC, etc.)"},
-                    "to_token": {"type": "string", "description": "Token symbol to receive (USDC, ETH, SOL, etc.)"}
+                    "from_token": {
+                        "type": "string",
+                        "description": "Token to sell (e.g., 'ETH', 'USDC')"
+                    },
+                    "to_token": {
+                        "type": "string",
+                        "description": "Token to buy (e.g., 'USDT', 'WBTC')"
+                    },
+                    "from_amount": {
+                        "type": "number",
+                        "description": "Amount of from_token to sell"
+                    }
                 },
-                "required": ["from_amount", "from_token", "to_token"]
+                "required": ["from_token", "to_token", "from_amount"]
             }
         }
     },
     {
         "type": "function",
         "function": {
-            "name": "get_crypto_info",
-            "description": "Get cryptocurrency market data, prices, analysis, and trading information. Use for questions about crypto prices, market cap, trading advice, or coin information.",
+            "name": "analyze_chart",
+            "description": "Analyze a cryptocurrency or stock chart using technical analysis. Use this when user asks about chart analysis, price predictions, trading signals, or wants to see a chart. DEFAULT: BINANCE exchange, 1D timeframe.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "coin": {"type": "string", "description": "Cryptocurrency name or symbol (bitcoin, eth, solana, etc.)"},
-                    "include_sentiment": {"type": "boolean", "description": "Whether to include Fear & Greed Index sentiment data", "default": True}
+                    "symbol": {
+                        "type": "string",
+                        "description": "Trading symbol (e.g., 'ETH', 'BTC', 'AAPL')"
+                    },
+                    "exchange": {
+                        "type": "string",
+                        "description": "Exchange name: 'BINANCE' for crypto (default), 'NASDAQ' or 'NYSE' for stocks",
+                        "enum": ["BINANCE", "NASDAQ", "NYSE", "COINBASE"],
+                        "default": "BINANCE"
+                    },
+                    "interval": {
+                        "type": "string",
+                        "description": "Chart timeframe (default: 1D)",
+                        "enum": ["1m", "5m", "15m", "1h", "4h", "1D", "1W"],
+                        "default": "1D"
+                    }
                 },
-                "required": ["coin"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "explain_transaction",
-            "description": "Explain how blockchain transactions work, including gas fees, confirmations, transaction lifecycle, etc. Use when user asks about how transactions work.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "topic": {"type": "string", "description": "Transaction topic to explain (gas fees, confirmations, transaction speed, etc.)"}
-                },
-                "required": ["topic"]
+                "required": ["symbol"]
             }
         }
     }

@@ -98,26 +98,22 @@ class DeFiLlamaYields:
         return sorted(stable_pools, key=lambda x: x.get('apy', 0) or 0, reverse=True)
 
     @staticmethod
-    def get_safe_pools(pools: List[Dict[str, Any]], min_tvl: float = 1000000, min_apy: float = 7.0, max_apy: float = 15.0) -> List[Dict[str, Any]]:
+    def get_safe_pools(pools: List[Dict[str, Any]], min_tvl: float = 20000000, min_apy: float = 7.0, max_apy: float = 15.0) -> List[Dict[str, Any]]:
         """
-        Get safe yield pools with moderate APY and good TVL
-        Args:
-            pools: List of pools
-            min_tvl: Minimum TVL in USD (default 1M for safety)
-            min_apy: Minimum APY (default 7%)
-            max_apy: Maximum APY (default 15% to avoid risky pools)
+        Get safe pools with moderate APY (7-15%) and high TVL (20M+)
+        These are generally more stable and less risky
         """
         safe_pools = []
         for pool in pools:
+            tvl = pool.get('tvlUsd', 0) or 0
             apy_base = pool.get('apy', 0) or 0
             apy_reward = pool.get('apyReward', 0) or 0
-            apy_total = apy_base + apy_reward
-            tvl = pool.get('tvlUsd', 0) or 0
-            
-            # Filter for safe APY range and good TVL
-            if min_apy <= apy_total <= max_apy and tvl >= min_tvl:
+            total_apy = apy_base + apy_reward
+
+            # Filter by TVL and APY range
+            if tvl >= min_tvl and min_apy <= total_apy <= max_apy:
                 safe_pools.append(pool)
-        
+
         # Sort by TVL (higher TVL = safer)
         return sorted(safe_pools, key=lambda x: x.get('tvlUsd', 0) or 0, reverse=True)
 
@@ -282,8 +278,9 @@ YIELD_TOOLS = [
                 "properties": {
                     "chain": {
                         "type": "string",
-                        "description": "Filter by blockchain: ethereum, polygon, arbitrum, optimism, bsc, avalanche, solana, etc.",
-                        "enum": ["ethereum", "polygon", "arbitrum", "optimism", "bsc", "avalanche", "solana", "all"]
+                        "description": "Filter by blockchain: ethereum, polygon, arbitrum, optimism, bsc, avalanche, solana, etc. (default: ethereum)",
+                        "enum": ["ethereum", "polygon", "arbitrum", "optimism", "bsc", "avalanche", "solana", "all"],
+                        "default": "ethereum"
                     },
                     "token": {
                         "type": "string",
@@ -291,12 +288,14 @@ YIELD_TOOLS = [
                     },
                     "min_tvl": {
                         "type": "number",
-                        "description": "Minimum TVL in USD to filter safe pools (default: 100000)"
+                        "description": "Minimum TVL in USD to filter safe pools (default: 20000000 for safe pools)",
+                        "default": 20000000
                     },
                     "pool_type": {
                         "type": "string",
-                        "description": "Type of pools: safe (APY 7-15%, high TVL), stablecoin (safer), high-apy (riskier), or all",
-                        "enum": ["safe", "stablecoin", "high-apy", "all"]
+                        "description": "Type of pools: safe (APY 7-15%, TVL 20M+), stablecoin (safer), high-apy (riskier), or all (default: safe)",
+                        "enum": ["safe", "stablecoin", "high-apy", "all"],
+                        "default": "safe"
                     }
                 },
                 "required": []

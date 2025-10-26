@@ -71,9 +71,10 @@ class ChatHistoryDB:
     def add_message(self, wallet_address: str, role: str, content: str, metadata: Optional[Dict] = None) -> bool:
         """Add a message to the chat"""
         if not self.collection:
-            print("⚠️ MongoDB not available")
+            print("⚠️ MongoDB not available - messages will not be saved")
+            print("⚠️ Please check that MONGODBURI is set in your .env file")
             return False
-        
+
         try:
             message = {
                 "role": role,
@@ -81,11 +82,15 @@ class ChatHistoryDB:
                 "timestamp": datetime.utcnow(),
                 "metadata": metadata or {}
             }
-            
+
+            print(f"💾 Saving {role} message for wallet: {wallet_address[:10]}...")
+
             # Create chat if it doesn't exist
-            if not self.collection.find_one({"wallet_address": wallet_address}):
+            existing_chat = self.collection.find_one({"wallet_address": wallet_address})
+            if not existing_chat:
+                print(f"📝 Creating new chat for wallet: {wallet_address[:10]}...")
                 self.create_chat(wallet_address)
-            
+
             result = self.collection.update_one(
                 {"wallet_address": wallet_address},
                 {
@@ -93,10 +98,17 @@ class ChatHistoryDB:
                     "$set": {"updated_at": datetime.utcnow()}
                 }
             )
-            
-            return result.modified_count > 0
+
+            if result.modified_count > 0:
+                print(f"✅ Successfully saved {role} message")
+                return True
+            else:
+                print(f"⚠️ Message was not saved (modified_count: {result.modified_count})")
+                return False
         except Exception as e:
             print(f"❌ Error adding message: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def get_chat_history(self, wallet_address: str) -> Optional[Dict]:

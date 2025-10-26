@@ -38,44 +38,35 @@ export default function YieldGraphPage() {
     try {
       setLoading(true);
       
-      // Trigger the AI to fetch yield pools (which will generate MeTTa knowledge)
-      const response = await fetch('http://localhost:5001/api/chat', {
-        method: 'POST',
+      // Fetch MeTTa knowledge directly from dedicated endpoint
+      const response = await fetch('http://localhost:5001/api/yield/metta', {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          message: 'show me all safe yield pools with good TVL',
-          user_id: 'web_user',
-        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch yield data');
+        throw new Error('Failed to fetch MeTTa knowledge graph data');
       }
 
       const data = await response.json();
       
       console.log('API Response:', data);
       
-      // Check for metta_knowledge in response
-      if (!data.metta_knowledge) {
-        console.error('No metta_knowledge in response:', data);
-        throw new Error('AI did not generate MeTTa knowledge graph. Try asking: "show me yield pools"');
-      }
-      
-      if (!data.metta_knowledge.graph_data) {
-        console.error('No graph_data in metta_knowledge:', data.metta_knowledge);
+      // Validate MeTTa knowledge structure
+      if (!data.graph_data) {
+        console.error('No graph_data in response:', data);
         throw new Error('MeTTa knowledge graph data is incomplete');
       }
       
-      if (!data.metta_knowledge.graph_data.nodes || data.metta_knowledge.graph_data.nodes.length === 0) {
-        console.error('No nodes in graph_data:', data.metta_knowledge.graph_data);
+      if (!data.graph_data.nodes || data.graph_data.nodes.length === 0) {
+        console.error('No nodes in graph_data:', data.graph_data);
         throw new Error('Knowledge graph has no nodes');
       }
       
-      setKnowledgeGraph(data.metta_knowledge);
-      console.log('✅ Set knowledge graph with', data.metta_knowledge.graph_data.nodes.length, 'nodes');
+      setKnowledgeGraph(data);
+      console.log('✅ Set knowledge graph with', data.graph_data.nodes.length, 'nodes');
     } catch (err) {
       console.error('Error fetching yield graph:', err);
       setError(err instanceof Error ? err.message : 'Failed to load knowledge graph');
@@ -177,7 +168,7 @@ export default function YieldGraphPage() {
             <p className="text-primary text-lg font-semibold mb-2">⚠️</p>
             <p className="text-muted-foreground mb-2">{error}</p>
             <p className="text-xs text-muted-foreground mb-4">
-              The AI needs to use the yield tool to generate the graph. Make sure you're asking about yield pools.
+              This endpoint directly fetches yield pools and creates the MeTTa knowledge graph. Make sure the backend is running.
             </p>
             <Button
               onClick={fetchYieldGraph}

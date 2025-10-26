@@ -422,6 +422,46 @@ def get_protocol(protocol):
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/yield/metta', methods=['GET'])
+def get_metta_knowledge():
+    """Get MeTTa knowledge graph from yield pools"""
+    try:
+        from tools.yield_tools import DeFiLlamaYields, YieldAnalyzer
+        import os
+        
+        # Get API keys
+        defillama_key = os.getenv("DEFILLAMA_API_KEY")
+        
+        # Fetch all pools
+        pools = DeFiLlamaYields.get_all_pools(api_key=defillama_key)
+        
+        if not pools:
+            return jsonify({"error": "Failed to fetch yield pools"}), 500
+        
+        # Filter for safe pools (APY 7-15%, TVL > $1M)
+        safe_pools = [
+            p for p in pools 
+            if 7 <= (p.get('apy', 0) or 0) + (p.get('apyReward', 0) or 0) <= 15
+            and p.get('tvlUsd', 0) >= 1000000
+        ][:20]  # Take top 20
+        
+        print(f"✅ Found {len(safe_pools)} safe pools for MeTTa knowledge graph")
+        
+        # Create MeTTa knowledge base
+        metta_kb = YieldAnalyzer.create_metta_knowledge_base(safe_pools)
+        
+        if not metta_kb or not metta_kb.get('graph_data'):
+            return jsonify({"error": "Failed to create MeTTa knowledge base"}), 500
+        
+        return jsonify(metta_kb), 200
+        
+    except Exception as e:
+        print(f"❌ Error in get_metta_knowledge: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
 # ============= Chat History Endpoints =============
 
 @app.route('/api/chat/history', methods=['GET'])
@@ -498,6 +538,23 @@ def update_chat_summary():
         else:
             return jsonify({"error": "Failed to update summary"}), 500
             
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/chart/<path:filename>', methods=['GET'])
+def serve_chart(filename):
+    """Serve chart images from temp directory"""
+    try:
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        file_path = os.path.join(temp_dir, filename)
+
+        if os.path.exists(file_path):
+            from flask import send_file
+            return send_file(file_path, mimetype='image/png')
+        else:
+            return jsonify({"error": "Chart image not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

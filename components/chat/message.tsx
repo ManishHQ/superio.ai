@@ -33,6 +33,8 @@ export interface ToolUsed {
   source: string;
   filters?: any;
   results_count?: number;
+  chart_url?: string;
+  recommendation?: string;
 }
 
 export interface YieldPool {
@@ -208,6 +210,19 @@ export function ChatMessage({ message }: MessageProps) {
                             .filter(([_, value]) => value && value !== 'all')
                             .map(([key, value]) => `${key}: ${value}`)
                             .join(', ')}
+                        </div>
+                      )}
+                      {tool.chart_url && (
+                        <div className="mt-2">
+                          <img
+                            src={tool.chart_url}
+                            alt="Chart Analysis"
+                            className="w-full max-w-2xl rounded border-2 border-primary"
+                            onError={(e) => {
+                              console.error('Failed to load chart image:', tool.chart_url);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
                         </div>
                       )}
                     </div>

@@ -1,7 +1,13 @@
 'use client';
 
-import { useMemo, useState, useCallback } from 'react';
-import { GraphView } from 'react-digraph';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+
+// Dynamically import ForceGraph2D to avoid SSR issues
+const ForceGraph2D = dynamic(
+  () => import('react-force-graph-2d'),
+  { ssr: false }
+);
 
 interface KnowledgeNode {
   id: string;
@@ -24,72 +30,63 @@ interface MeTTaKnowledgeProps {
   safePools?: string[];
 }
 
-// Define node types for react-digraph
-const nodeTypes = [
-  { type: 'token', shape: 'circle', background: '#0080ff', textFill: '#ffffff' },
-  { type: 'pool', shape: 'circle', background: '#ffff00', textFill: '#000000' },
-  { type: 'chain', shape: 'circle', background: '#ff0080', textFill: '#ffffff' },
-  { type: 'safe', shape: 'circle', background: '#00ff41', textFill: '#000000' },
-];
-
-// Define edge types
-const edgeTypes = [
-  { type: 'isInPool', shapeType: 'bezier', edgeArrowType: 'arrowclosed', label: 'isInPool' },
-  { type: 'onChain', shapeType: 'bezier', edgeArrowType: 'arrowclosed', label: 'onChain' },
-];
+// Node color mapping
+const NODE_COLORS: Record<string, string> = {
+  token: '#3b82f6',    // Blue
+  pool: '#eab308',     // Yellow
+  chain: '#ec4899',    // Pink
+  safe: '#22c55e',     // Green
+};
 
 export function MeTTaKnowledgeGraph({ graphData, safePools = [] }: MeTTaKnowledgeProps) {
-  const [selectedNode, setSelectedNode] = useState<any | null>(null);
-  
-  // Convert our nodes to react-digraph format
-  const nodes = useMemo(() => {
+  const [selectedNode, setSelectedNode] = useState<any>(null);
+  const [hoveredNode, setHoveredNode] = useState<any>(null);
+  const graphRef = useRef<any>();
+
+  // Convert to react-force-graph format
+  const graphForceData = useMemo(() => {
     if (!graphData?.nodes || graphData.nodes.length === 0) {
-      return [];
+      return { nodes: [], links: [] };
     }
-    
-    return graphData.nodes.map((node) => {
+
+    // Convert nodes
+    const nodes = graphData.nodes.map((node) => {
       const isSafe = safePools.includes(node.id);
       let nodeType = node.type;
-      
+
       // Override type for safe pools
       if (node.type === 'pool' && isSafe) {
         nodeType = 'safe';
       }
-      
+
       return {
         id: node.id,
-        title: node.label || node.id,
-        x: Math.random() * 800,
-        y: Math.random() * 600,
+        name: node.label || node.id,
         type: nodeType,
+        color: NODE_COLORS[nodeType] || '#6b7280',
+        properties: node.properties,
       };
     });
-  }, [graphData?.nodes, safePools]);
 
-  // Convert our edges to react-digraph format
-  const edges = useMemo(() => {
-    if (!graphData?.edges || graphData.edges.length === 0) {
-      return [];
-    }
-    
-    return graphData.edges.map((edge, index) => ({
+    // Convert edges to links
+    const links = graphData.edges.map((edge) => ({
       source: edge.from,
       target: edge.to,
-      type: edge.relation || 'bezier',
-      id: `edge-${index}`,
-      handleText: edge.relation,
+      relation: edge.relation,
     }));
-  }, [graphData?.edges]);
 
-  // Handler for node selection
-  const onSelectNode = useCallback((selectedNode: any) => {
-    console.log('Selected node:', selectedNode);
-    setSelectedNode(selectedNode);
+    return { nodes, links };
+  }, [graphData, safePools]);
+
+  // Node click handler
+  const handleNodeClick = useCallback((node: any) => {
+    setSelectedNode(node);
+    console.log('Selected node:', node);
   }, []);
 
-  // Handler for edge selection
-  const onSelectEdge = useCallback((selectedEdge: any) => {
-    console.log('Selected edge:', selectedEdge);
+  // Node hover handler
+  const handleNodeHover = useCallback((node: any) => {
+    setHoveredNode(node);
   }, []);
 
   if (!graphData?.nodes || graphData.nodes.length === 0) {
@@ -134,26 +131,94 @@ export function MeTTaKnowledgeGraph({ graphData, safePools = [] }: MeTTaKnowledg
         </div>
       </div>
 
-      <div className="relative bg-card border border-border rounded overflow-hidden" style={{ height: '600px' }}>
-        <GraphView
-          nodeKey="id"
-          nodes={nodes}
-          edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
-          selected={selectedNode}
-          onSelectNode={onSelectNode}
-          onSelectEdge={onSelectEdge}
-          showGraphControls={true}
-          minZoom={0.1}
-          maxZoom={2}
-          nodeSize={100}
+      <div className="relative bg-black border-2 border-primary rounded overflow-hidden" style={{ height: '600px', width: '100%' }}>
+        <ForceGraph2D
+          ref={graphRef}
+          graphData={graphForceData}
+          nodeLabel="name"
+          nodeColor={(node: any) => node.color}
+          nodeRelSize={8}
+          linkColor={() => 'rgba(117, 186, 117, 0.4)'}
+          linkWidth={2}
+          linkDirectionalArrowLength={4}
+          linkDirectionalArrowRelPos={1}
+          onNodeClick={handleNodeClick}
+          onNodeHover={handleNodeHover}
+          backgroundColor="#000000"
+          nodeCanvasObject={(node: any, ctx: any, globalScale: any) => {
+            const label = node.name;
+            const fontSize = 12 / globalScale;
+            ctx.font = `${fontSize}px "Geist Mono", monospace`;
+
+            // Draw node circle
+            ctx.beginPath();
+            ctx.arc(node.x, node.y, 8, 0, 2 * Math.PI);
+            ctx.fillStyle = node.color;
+            ctx.fill();
+
+            // Add glow effect for selected/hovered nodes
+            if (node === selectedNode || node === hoveredNode) {
+              ctx.shadowBlur = 15;
+              ctx.shadowColor = node.color;
+              ctx.strokeStyle = node.color;
+              ctx.lineWidth = 2;
+              ctx.stroke();
+              ctx.shadowBlur = 0;
+            } else {
+              ctx.strokeStyle = '#fff';
+              ctx.lineWidth = 1;
+              ctx.stroke();
+            }
+
+            // Draw label
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#75ba75';
+            ctx.shadowBlur = 3;
+            ctx.shadowColor = 'rgba(117, 186, 117, 0.5)';
+            ctx.fillText(label, node.x, node.y + 15);
+            ctx.shadowBlur = 0;
+          }}
+          enableNodeDrag={true}
+          enableZoomInteraction={true}
+          enablePanInteraction={true}
         />
       </div>
 
+      {/* Selected node info */}
+      {selectedNode && (
+        <div className="mt-4 p-3 bg-card border-2 border-primary rounded">
+          <h4 className="font-bold text-sm mb-2 text-primary">Selected: {selectedNode.name}</h4>
+          <div className="text-xs text-muted-foreground space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">Type:</span>
+              <span className="capitalize">{selectedNode.type}</span>
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: selectedNode.color }}></div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold">ID:</span>
+              <span className="font-mono text-xs">{selectedNode.id}</span>
+            </div>
+            {selectedNode.properties && Object.keys(selectedNode.properties).length > 0 && (
+              <div className="mt-2 pt-2 border-t border-border">
+                <div className="font-semibold mb-1">Properties:</div>
+                <div className="pl-2 space-y-1">
+                  {Object.entries(selectedNode.properties).map(([key, value]) => (
+                    <div key={key} className="flex gap-2">
+                      <span className="text-muted-foreground">{key}:</span>
+                      <span className="text-foreground">{String(value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Instructions */}
       <div className="mt-4 p-3 bg-card border border-border rounded text-xs text-muted-foreground">
-        <strong className="text-foreground">How to use:</strong> Drag nodes • Scroll to zoom • Pan by dragging background • Click nodes for details
+        <strong className="text-foreground">How to use:</strong> Click and drag nodes to reposition • Scroll to zoom • Click nodes to see details • Pan by dragging the background
       </div>
     </div>
   );

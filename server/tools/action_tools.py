@@ -91,7 +91,7 @@ ACTION_TOOLS = [
         "type": "function",
         "function": {
             "name": "lookup_transaction",
-            "description": "Look up and explain a blockchain transaction on Ethereum Sepolia testnet. Use this when user provides a transaction hash (0x...) and wants to know what happened in that transaction.",
+            "description": "Look up and explain a blockchain transaction on Ethereum Sepolia testnet. Use this when user provides a transaction hash (0x...) and wants to know what happened in that transaction, including sender, receiver, value, gas fees, etc.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -101,6 +101,61 @@ ACTION_TOOLS = [
                     }
                 },
                 "required": ["transaction_hash"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "analyze_address",
+            "description": "Get comprehensive on-chain analytics for an Ethereum address on Sepolia testnet. Use this when user asks about an address, wallet analysis, portfolio, holdings, transaction history, or on-chain metrics.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "address": {
+                        "type": "string",
+                        "description": "The Ethereum address (0x...) to analyze on Sepolia testnet"
+                    }
+                },
+                "required": ["address"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_address_tokens",
+            "description": "Get ERC-20 token holdings and balances for an Ethereum address on Sepolia testnet. Use this when user asks about what tokens an address owns or holds.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "address": {
+                        "type": "string",
+                        "description": "The Ethereum address (0x...) to query on Sepolia testnet"
+                    }
+                },
+                "required": ["address"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_address_transactions",
+            "description": "Get transaction history for an Ethereum address on Sepolia testnet. Use this when user asks about transaction history, recent activity, or what transactions an address has made.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "address": {
+                        "type": "string",
+                        "description": "The Ethereum address (0x...) to query on Sepolia testnet"
+                    },
+                    "limit": {
+                        "type": "number",
+                        "description": "Maximum number of transactions to return (default: 10)"
+                    }
+                },
+                "required": ["address"]
             }
         }
     }

@@ -41,12 +41,15 @@ Your capabilities:
 - **swap_token**: Prepare token swap transactions for wallet signing (ALWAYS use this for swap requests)
 - **analyze_chart**: Analyze cryptocurrency or stock charts (DEFAULT: BINANCE, 1D timeframe - use these if not specified)
 - **lookup_transaction**: Look up and explain blockchain transactions on Ethereum Sepolia when user provides a transaction hash (ALWAYS use this for transaction hash lookups)
+- **analyze_address**: Get comprehensive on-chain analytics for an address (balance, transaction count, activity metrics)
+- **get_address_tokens**: Get ERC-20 token holdings for an address
+- **get_address_transactions**: Get transaction history for an address
 - **get_crypto_info**: Get market data, prices, and analysis
 - **get_yield_pools**: Find and analyze DeFi yield farming opportunities
 - **explain_transaction**: Explain how blockchain transactions work in general
 - **General conversation**: Answer questions naturally
 
-IMPORTANT: For transaction requests (send/swap), you prepare the transaction - users sign it with their wallet. Always call the function! When users provide a transaction hash (0x...), ALWAYS use lookup_transaction to look it up!"""
+IMPORTANT: For transaction requests (send/swap), you prepare the transaction - users sign it with their wallet. Always call the function! When users provide a transaction hash (0x...), ALWAYS use lookup_transaction to look it up! When users ask about an address or want on-chain analytics, use analyze_address!"""
 
     # Combine all available tools
     all_tools = ACTION_TOOLS + YIELD_TOOLS
@@ -358,6 +361,177 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                     }
                 finally:
                     # Cleanup agent
+                    del blockscout_agent
+            
+            elif function_name == "analyze_address":
+                # Handle comprehensive address analysis
+                address = function_args.get("address", "").strip()
+                
+                if not address or not address.startswith("0x"):
+                    return {
+                        "response": "Invalid address. Please provide a valid Ethereum address (starting with 0x).",
+                        "tools_used": tools_used
+                    }
+                
+                chain_id = "11155111"  # Ethereum Sepolia
+                
+                print(f"🔍 Analyzing address {address} on Sepolia...")
+                
+                blockscout_agent = BlockscoutAgent()
+                
+                try:
+                    # Get comprehensive address info
+                    address_info = blockscout_agent.get_address_info(chain_id, address)
+                    tokens = blockscout_agent.get_tokens_by_address(chain_id, address)
+                    transactions = blockscout_agent.get_transactions_by_address(chain_id, address, limit=10)
+                    
+                    # Build response
+                    response_text = f"📊 **Address Analytics: {address}**\n\n"
+                    
+                    # Basic info
+                    if address_info:
+                        balance_wei = address_info.get('balance', 0)
+                        balance_eth = int(balance_wei) / 1e18 if balance_wei else 0
+                        tx_count = address_info.get('transaction_count', 0)
+                        
+                        response_text += f"**Balance:** {balance_eth:.6f} ETH\n"
+                        response_text += f"**Transaction Count:** {tx_count:,}\n\n"
+                    
+                    # Token holdings
+                    if tokens and len(tokens) > 0:
+                        response_text += f"**Token Holdings ({len(tokens)}):**\n"
+                        for token in tokens[:5]:  # Show top 5
+                            symbol = token.get('symbol', 'N/A')
+                            balance = token.get('balance', 0)
+                            decimals = token.get('decimals', 18)
+                            value = int(balance) / (10 ** decimals) if balance else 0
+                            response_text += f"  • {symbol}: {value:,.4f}\n"
+                        response_text += "\n"
+                    
+                    # Recent transactions summary
+                    if transactions and len(transactions) > 0:
+                        response_text += f"**Recent Activity ({len(transactions)} transactions):**\n"
+                        for tx in transactions[:3]:  # Show last 3
+                            tx_hash = tx.get('hash', '')[:10] + "..."
+                            response_text += f"  • {tx_hash}\n"
+                    
+                    tools_used[0]["source"] = "Blockscout MCP API"
+                    tools_used[0]["chain_id"] = chain_id
+                    
+                    return {
+                        "response": response_text,
+                        "tools_used": tools_used,
+                        "address_info": address_info,
+                        "token_count": len(tokens) if tokens else 0
+                    }
+                    
+                except Exception as e:
+                    print(f"❌ Error analyzing address: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    
+                    return {
+                        "response": f"⚠️ Failed to analyze address. Error: {str(e)}",
+                        "tools_used": tools_used
+                    }
+                finally:
+                    del blockscout_agent
+            
+            elif function_name == "get_address_tokens":
+                # Handle token holdings query
+                address = function_args.get("address", "").strip()
+                
+                if not address or not address.startswith("0x"):
+                    return {
+                        "response": "Invalid address. Please provide a valid Ethereum address (starting with 0x).",
+                        "tools_used": tools_used
+                    }
+                
+                chain_id = "11155111"
+                blockscout_agent = BlockscoutAgent()
+                
+                try:
+                    tokens = blockscout_agent.get_tokens_by_address(chain_id, address)
+                    
+                    if not tokens or len(tokens) == 0:
+                        return {
+                            "response": f"No ERC-20 tokens found for address {address} on Sepolia.",
+                            "tools_used": tools_used
+                        }
+                    
+                    response_text = f"💰 **Token Holdings for {address}:**\n\n"
+                    for token in tokens:
+                        symbol = token.get('symbol', 'N/A')
+                        name = token.get('name', 'Unknown')
+                        balance = token.get('balance', 0)
+                        decimals = token.get('decimals', 18)
+                        value = int(balance) / (10 ** decimals) if balance else 0
+                        response_text += f"**{symbol}** ({name})\n"
+                        response_text += f"  Balance: {value:,.6f}\n\n"
+                    
+                    tools_used[0]["source"] = "Blockscout MCP API"
+                    
+                    return {
+                        "response": response_text,
+                        "tools_used": tools_used,
+                        "token_count": len(tokens)
+                    }
+                    
+                except Exception as e:
+                    print(f"❌ Error getting tokens: {e}")
+                    return {
+                        "response": f"⚠️ Failed to get token holdings. Error: {str(e)}",
+                        "tools_used": tools_used
+                    }
+                finally:
+                    del blockscout_agent
+            
+            elif function_name == "get_address_transactions":
+                # Handle transaction history query
+                address = function_args.get("address", "").strip()
+                limit = function_args.get("limit", 10)
+                
+                if not address or not address.startswith("0x"):
+                    return {
+                        "response": "Invalid address. Please provide a valid Ethereum address (starting with 0x).",
+                        "tools_used": tools_used
+                    }
+                
+                chain_id = "11155111"
+                blockscout_agent = BlockscoutAgent()
+                
+                try:
+                    transactions = blockscout_agent.get_transactions_by_address(chain_id, address, limit=limit)
+                    
+                    if not transactions or len(transactions) == 0:
+                        return {
+                            "response": f"No transactions found for address {address} on Sepolia.",
+                            "tools_used": tools_used
+                        }
+                    
+                    response_text = f"📜 **Transaction History for {address}:**\n\n"
+                    for i, tx in enumerate(transactions[:limit], 1):
+                        tx_hash = tx.get('hash', '')[:16] + "..."
+                        from_addr = tx.get('from', '')[:10] + "..."
+                        to_addr = tx.get('to', '')[:10] + "..." if tx.get('to') else "Contract"
+                        response_text += f"{i}. `{tx_hash}`\n"
+                        response_text += f"   From: {from_addr} → To: {to_addr}\n\n"
+                    
+                    tools_used[0]["source"] = "Blockscout MCP API"
+                    
+                    return {
+                        "response": response_text,
+                        "tools_used": tools_used,
+                        "transaction_count": len(transactions)
+                    }
+                    
+                except Exception as e:
+                    print(f"❌ Error getting transactions: {e}")
+                    return {
+                        "response": f"⚠️ Failed to get transaction history. Error: {str(e)}",
+                        "tools_used": tools_used
+                    }
+                finally:
                     del blockscout_agent
             
             elif function_name == "get_yield_pools":

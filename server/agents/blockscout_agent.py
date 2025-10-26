@@ -201,8 +201,25 @@ class BlockscoutAgent:
         result = self._call_mcp("get_transactions_by_address", params)
         
         if "content" in result and result["content"]:
-            content = json.loads(result["content"][0]["text"])
-            return content if isinstance(content, list) else []
+            try:
+                content_text = result["content"][0]["text"]
+                content_data = json.loads(content_text)
+                
+                # Handle both direct array and nested data structure
+                if isinstance(content_data, list):
+                    return content_data
+                elif isinstance(content_data, dict) and "data" in content_data:
+                    # MCP returns data nested in a "data" field
+                    data = content_data["data"]
+                    if isinstance(data, list):
+                        return data
+                    elif isinstance(data, dict) and "items" in data:
+                        return data["items"]
+                
+                return []
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                print(f"❌ Error parsing transactions: {e}")
+                return []
         
         return []
     

@@ -5,7 +5,6 @@ import { useAccount } from 'wagmi';
 import { ChatMessage, Message } from './message';
 import { ChatInput } from './chat-input';
 import { TypingIndicator } from './typing-indicator';
-import { Button } from '@/components/ui/button';
 import { API_ENDPOINTS } from '@/lib/config';
 
 export function ChatInterface() {
@@ -167,13 +166,13 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] max-w-5xl mx-auto bg-background overflow-hidden">
+    <div className="flex flex-col h-screen bg-background no-border">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 bg-background">
+      <div className="flex items-center justify-between px-6 py-4 bg-background border-b-0">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 border-2 border-primary rounded-full flex items-center justify-center">
+          <div className="w-10 h-10 flex items-center justify-center">
             <svg
-              className="w-5 h-5 text-primary"
+              className="w-6 h-6 text-primary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -187,19 +186,17 @@ export function ChatInterface() {
             </svg>
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">DeFi AI Assistant</h1>
+            <h1 className="text-xl font-bold text-foreground">Chat with Superio</h1>
             <p className="text-xs text-muted-foreground">
               {isTyping ? 'Analyzing...' : 'Multi-Agent + ASI:One Powered'}
             </p>
-            {address && (
-              <p className="text-xs text-primary font-mono mt-1">
-                {address.slice(0, 6)}...{address.slice(-4)}
-              </p>
-            )}
           </div>
         </div>
 
-        <Button variant="ghost" size="sm" onClick={handleClearChat}>
+        <button
+          onClick={handleClearChat}
+          className="flex items-center gap-2 px-4 py-2 text-sm"
+        >
           <svg
             className="w-4 h-4"
             fill="none"
@@ -214,20 +211,20 @@ export function ChatInterface() {
             />
           </svg>
           Clear
-        </Button>
+        </button>
       </div>
 
       {/* Messages Area */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto bg-background"
+        className="flex-1 overflow-y-auto bg-background px-4 border-b-0"
       >
-        <div className="py-4">
+        <div className="py-4 max-w-4xl mx-auto">
           {messages.map((message) => (
             <ChatMessage key={message.id} message={message} />
           ))}
           {isTyping && (
-            <div className="px-4 py-2">
+            <div className="py-2">
               <TypingIndicator />
             </div>
           )}
@@ -236,7 +233,11 @@ export function ChatInterface() {
       </div>
 
       {/* Input Area */}
-      <ChatInput onSendMessage={handleSendMessage} disabled={isTyping} />
+      <div className="px-4 pb-4">
+        <div className="max-w-4xl mx-auto">
+          <ChatInput onSendMessage={handleSendMessage} disabled={isTyping} />
+        </div>
+      </div>
     </div>
   );
 }

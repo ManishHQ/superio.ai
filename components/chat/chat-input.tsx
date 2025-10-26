@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, FormEvent } from 'react';
-import { Button } from '@/components/ui/button';
 
 interface ChatInputProps {
   onSendMessage: (message: string, files?: File[]) => void;
@@ -52,13 +51,14 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
   };
 
   return (
-    <div className="bg-background p-4">
+    <div className="bg-background p-4 no-border">
       {attachedFiles.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-2">
           {attachedFiles.map((file, index) => (
             <div
               key={index}
-              className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded"
+              className="flex items-center gap-2 px-3 py-2 bg-background"
+              style={{ border: 'none' }}
             >
               <svg
                 className="w-4 h-4 text-primary"
@@ -79,7 +79,8 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
               <button
                 type="button"
                 onClick={() => removeFile(index)}
-                className="!border-0 !shadow-none !p-0 ml-1 text-muted-foreground hover:text-destructive transition-colors"
+                className="ml-1 text-muted-foreground hover:text-destructive transition-colors"
+                style={{ border: 'none', boxShadow: 'none', padding: 0, background: 'transparent' }}
               >
                 <svg
                   className="w-4 h-4"
@@ -100,7 +101,7 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex gap-2 items-center" style={{ border: 'none' }}>
         <input
           ref={fileInputRef}
           type="file"
@@ -109,15 +110,15 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
           className="hidden"
         />
 
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="icon"
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled}
+          className="p-2"
+          style={{ border: 'none', boxShadow: 'none', background: 'transparent' }}
         >
           <svg
-            className="w-5 h-5"
+            className="w-5 h-5 text-foreground"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -129,7 +130,7 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
               d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
             />
           </svg>
-        </Button>
+        </button>
 
         <textarea
           ref={textareaRef}
@@ -137,14 +138,20 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
           onChange={handleTextareaChange}
           onKeyDown={handleKeyDown}
           placeholder="Type your message... (Shift+Enter for new line)"
-          className="flex-1 resize-none min-h-[44px] max-h-[200px] px-4 py-3"
+          className="flex-1 resize-none min-h-[44px] max-h-[200px] px-4 py-3 bg-background text-foreground"
+          style={{ border: 'none', outline: 'none' }}
           rows={1}
           disabled={disabled}
         />
 
-        <Button type="submit" disabled={disabled || (!message.trim() && attachedFiles.length === 0)}>
+        <button
+          type="submit"
+          disabled={disabled || (!message.trim() && attachedFiles.length === 0)}
+          className="p-2"
+          style={{ border: 'none', boxShadow: 'none', background: 'transparent' }}
+        >
           <svg
-            className="w-5 h-5"
+            className="w-5 h-5 text-primary"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -156,12 +163,8 @@ export function ChatInput({ onSendMessage, disabled }: ChatInputProps) {
               d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
             />
           </svg>
-        </Button>
+        </button>
       </form>
-
-      <p className="text-xs text-muted-foreground mt-2 px-1">
-        Press Enter to send, Shift+Enter for new line
-      </p>
     </div>
   );
 }

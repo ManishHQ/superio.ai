@@ -42,13 +42,13 @@ export default function Home() {
 			</div>
 
 			{/* Title */}
-			<h1 className='text-7xl sm:text-8xl md:text-9xl font-black text-primary mb-8 tracking-wider' style={{ fontFamily: 'var(--font-orbitron)' }}>
+			<h1 className='text-7xl sm:text-8xl md:text-9xl font-black text-primary mb-8 tracking-wider font-orbitron'>
 				Superio
 			</h1>
 
 			{/* Subtitle with Typewriter Effect */}
 			<div className='h-20 flex items-center justify-center mb-12'>
-				<p className='text-3xl sm:text-4xl md:text-5xl text-muted-foreground font-medium tracking-wide' style={{ fontFamily: 'var(--font-orbitron)' }}>
+				<p className='text-3xl sm:text-4xl md:text-5xl text-muted-foreground font-medium tracking-wide font-orbitron'>
 					{displayText}
 					<span className='inline-block w-1 h-10 ml-1 bg-primary animate-pulse' />
 				</p>
@@ -65,7 +65,6 @@ export default function Home() {
 					<button
 						onClick={() => router.push('/chat')}
 						className='px-8 py-4 text-lg font-bold tracking-wide'
-						style={{ fontFamily: 'var(--font-orbitron)' }}
 					>
 						Start Chatting →
 					</button>

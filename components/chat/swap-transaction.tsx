@@ -58,7 +58,7 @@ export function SwapTransaction({ swapData }: SwapTransactionProps) {
   });
 
   // Calculate FET amount based on exchange rate
-  const ethAmount = parseFloat(swapData.from_amount);
+  const ethAmount = typeof swapData.from_amount === 'string' ? parseFloat(swapData.from_amount) : swapData.from_amount;
   const expectedFETAmount = exchangeRate ? Number(exchangeRate) * ethAmount : ethAmount * 1000; // 1000:1 rate
 
   const handleSwap = async () => {
@@ -85,11 +85,12 @@ export function SwapTransaction({ swapData }: SwapTransactionProps) {
       setErrorMessage('');
 
       // Call the swap function with ETH amount
+      const ethAmount = typeof swapData.from_amount === 'string' ? swapData.from_amount : swapData.from_amount.toString();
       writeContract({
         address: SIMPLE_SWAP_ADDRESS,
         abi: SIMPLE_SWAP_ABI,
         functionName: 'swapETHforFET',
-        value: parseEther(swapData.from_amount),
+        value: parseEther(ethAmount),
       });
     } catch (err: any) {
       console.error('Swap error:', err);
@@ -152,7 +153,7 @@ export function SwapTransaction({ swapData }: SwapTransactionProps) {
             </div>
           </div>
           <div className="text-right">
-            <div className="text-lg font-bold">{swapData.from_amount}</div>
+            <div className="text-lg font-bold">{typeof swapData.from_amount === 'string' ? swapData.from_amount : swapData.from_amount.toString()}</div>
           </div>
         </div>
       </div>

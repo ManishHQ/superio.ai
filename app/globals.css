@@ -333,3 +333,21 @@
   background-size: 200% 200%;
   animation: gradient 3s ease infinite;
 }
+
+/* Orbitron Font Override */
+.font-orbitron {
+  font-family: var(--font-orbitron) !important;
+}
+
+.font-orbitron * {
+  font-family: var(--font-orbitron) !important;
+}
+
+/* No Border Override for Chat */
+.no-border {
+  border: none !important;
+}
+
+.no-border * {
+  border: none !important;
+}

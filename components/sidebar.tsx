@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { API_ENDPOINTS } from '@/lib/config';
 
 interface Conversation {
     id: string;
@@ -31,7 +32,7 @@ export function Sidebar() {
       setIsLoading(true);
       try {
         const response = await fetch(
-          `http://localhost:5001/api/chat/history?wallet_address=${address}`
+          API_ENDPOINTS.chatHistory(address)
         );
         
         if (response.ok) {

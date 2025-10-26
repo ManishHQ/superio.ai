@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { MeTTaKnowledgeGraph } from '@/components/metta-knowledge-graph';
 import { Button } from '@/components/ui/button';
+import { API_ENDPOINTS } from '@/lib/config';
 
 interface MeTTaKnowledge {
   graph_data: {
@@ -38,8 +39,8 @@ export default function YieldGraphPage() {
     try {
       setLoading(true);
       
-      // Fetch MeTTa knowledge directly from dedicated endpoint
-      const response = await fetch('http://localhost:5001/api/yield/metta', {
+                    // Fetch MeTTa knowledge directly from dedicated endpoint
+              const response = await fetch(API_ENDPOINTS.yieldMetta, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

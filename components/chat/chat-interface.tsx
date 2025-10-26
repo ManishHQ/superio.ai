@@ -6,6 +6,7 @@ import { ChatMessage, Message } from './message';
 import { ChatInput } from './chat-input';
 import { TypingIndicator } from './typing-indicator';
 import { Button } from '@/components/ui/button';
+import { API_ENDPOINTS } from '@/lib/config';
 
 export function ChatInterface() {
   const { address } = useAccount();
@@ -36,7 +37,7 @@ export function ChatInterface() {
     const loadChatHistory = async () => {
       try {
         const response = await fetch(
-          `http://localhost:5001/api/chat/history?wallet_address=${address}`
+          API_ENDPOINTS.chatHistory(address)
         );
         
         if (response.ok) {
@@ -94,7 +95,7 @@ export function ChatInterface() {
 
     try {
       // Call the DeFi chat API (backend will save messages to database)
-      const response = await fetch('http://localhost:5001/api/chat', {
+      const response = await fetch(API_ENDPOINTS.chat, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

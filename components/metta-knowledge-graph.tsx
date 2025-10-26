@@ -41,7 +41,7 @@ const NODE_COLORS: Record<string, string> = {
 export function MeTTaKnowledgeGraph({ graphData, safePools = [] }: MeTTaKnowledgeProps) {
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [hoveredNode, setHoveredNode] = useState<any>(null);
-  const graphRef = useRef<any>();
+  const graphRef = useRef<any>(null);
 
   // Convert to react-force-graph format
   const graphForceData = useMemo(() => {

@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { SendTransaction } from './send-transaction';
 
 export interface SwapUI {
   from_token: string;
@@ -44,6 +45,25 @@ export interface YieldPool {
   apy_reward: number;
   tvl: number;
   url: string;
+}
+
+export interface MeTTaKnowledge {
+  graph_data: {
+    nodes: Array<{
+      id: string;
+      type: string;
+      label: string;
+      properties: Record<string, any>;
+    }>;
+    edges: Array<{
+      from: string;
+      to: string;
+      relation: string;
+    }>;
+  };
+  safe_pools?: string[];
+  facts_count?: number;
+  rules_count?: number;
 }
 
 export interface Message {
@@ -155,8 +175,9 @@ export function ChatMessage({ message }: MessageProps) {
             </div>
           )}
 
-          {/* Tools Used Display */}
-          {message.tools_used && message.tools_used.length > 0 && (
+          {/* Tools Used Display - Only show for non-general conversations */}
+          {message.tools_used && message.tools_used.length > 0 && 
+           !message.tools_used.some(tool => tool.name === 'General Conversation') && (
             <div className="mt-3 p-3 bg-background border border-border rounded-lg space-y-2">
               <div className="flex items-center gap-2 mb-2">
                 <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -164,32 +185,34 @@ export function ChatMessage({ message }: MessageProps) {
                 </svg>
                 <span className="text-xs font-semibold text-muted-foreground">Data Sources Used</span>
               </div>
-              {message.tools_used.map((tool, idx) => (
-                <div key={idx} className="flex items-start gap-2 text-xs">
-                  <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-primary mt-1.5"></div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">{tool.name}</span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-primary">{tool.source}</span>
-                      {tool.results_count !== undefined && (
-                        <>
-                          <span className="text-muted-foreground">•</span>
-                          <span className="text-muted-foreground">{tool.results_count} results</span>
-                        </>
+              {message.tools_used
+                .filter(tool => tool.name !== 'General Conversation')
+                .map((tool, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-xs">
+                    <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-primary mt-1.5"></div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">{tool.name}</span>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="text-primary">{tool.source}</span>
+                        {tool.results_count !== undefined && (
+                          <>
+                            <span className="text-muted-foreground">•</span>
+                            <span className="text-muted-foreground">{tool.results_count} results</span>
+                          </>
+                        )}
+                      </div>
+                      {tool.filters && Object.keys(tool.filters).length > 0 && (
+                        <div className="mt-1 text-muted-foreground">
+                          Filters: {Object.entries(tool.filters)
+                            .filter(([_, value]) => value && value !== 'all')
+                            .map(([key, value]) => `${key}: ${value}`)
+                            .join(', ')}
+                        </div>
                       )}
                     </div>
-                    {tool.filters && Object.keys(tool.filters).length > 0 && (
-                      <div className="mt-1 text-muted-foreground">
-                        Filters: {Object.entries(tool.filters)
-                          .filter(([_, value]) => value && value !== 'all')
-                          .map(([key, value]) => `${key}: ${value}`)
-                          .join(', ')}
-                      </div>
-                    )}
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
 
@@ -285,83 +308,7 @@ export function ChatMessage({ message }: MessageProps) {
           )}
 
           {/* Send UI Component */}
-          {message.send_ui && (
-            <div className="mt-4 p-4 bg-background border-2 border-green-500 rounded-lg space-y-3">
-              <div className="flex items-center gap-2 mb-3">
-                <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-                <span className="text-sm font-bold text-green-500">Send Transaction</span>
-              </div>
-
-              {/* Token & Amount */}
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">Amount</label>
-                <div className="flex items-center justify-between p-3 bg-card border border-border rounded">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                      <span className="text-xs font-bold text-green-500">{message.send_ui.token}</span>
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">{message.send_ui.token_name}</div>
-                      <div className="text-xs text-muted-foreground">{message.send_ui.network}</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-green-500">{message.send_ui.amount}</div>
-                    <div className="text-xs text-muted-foreground">{message.send_ui.token}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recipient Address */}
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground">To Address</label>
-                <div className="p-3 bg-card border border-border rounded">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-muted-foreground flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    <code className="text-xs font-mono break-all">{message.send_ui.to_address}</code>
-                  </div>
-                </div>
-              </div>
-
-              {/* Details */}
-              <div className="pt-2 space-y-1 border-t border-border">
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Network</span>
-                  <span className="font-medium">{message.send_ui.network}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">Estimated Gas</span>
-                  <span className="font-medium">{message.send_ui.estimated_gas} {message.send_ui.gas_symbol}</span>
-                </div>
-                {message.send_ui.total_cost && (
-                  <div className="flex justify-between text-xs font-semibold pt-1 border-t border-border">
-                    <span className="text-muted-foreground">Total Cost</span>
-                    <span className="text-foreground">{(message.send_ui.amount + message.send_ui.estimated_gas).toFixed(6)} {message.send_ui.token}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => alert('Send functionality coming soon! This will integrate with your wallet to complete the transaction.')}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white font-medium rounded hover:bg-green-700 transition-colors"
-                >
-                  Send
-                </button>
-                <button
-                  onClick={() => {/* Do nothing - just dismiss */}}
-                  className="px-4 py-2 border border-border text-foreground font-medium rounded hover:bg-secondary transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+          {message.send_ui && <SendTransaction sendData={message.send_ui} />}
 
           {/* Yield Pools UI Component */}
           {message.yield_pools && message.yield_pools.length > 0 && (

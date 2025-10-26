@@ -166,6 +166,52 @@ class DeFiLlamaYields:
 
 class YieldAnalyzer:
     """Analyze yield opportunities using AI"""
+    
+    @staticmethod
+    def create_metta_knowledge_base(pools: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Create MeTTa knowledge graph from pools"""
+        try:
+            from knowledge.defi_knowledge import DeFiKnowledgeBase
+            
+            kb = DeFiKnowledgeBase()
+            kb.add_safety_rules()
+            
+            # Add all pools to knowledge base
+            for pool in pools:
+                apy_base = pool.get('apy', 0) or 0
+                apy_reward = pool.get('apyReward', 0) or 0
+                apy_total = apy_base + apy_reward
+                
+                pool_data = {
+                    'project': pool.get('project', 'Unknown'),
+                    'symbol': pool.get('symbol', 'Unknown'),
+                    'chain': pool.get('chain', 'Unknown'),
+                    'apy_total': round(apy_total, 2),
+                    'apy_base': round(apy_base, 2),
+                    'apy_reward': round(apy_reward, 2),
+                    'tvl': round(pool.get('tvlUsd', 0) or 0, 0),
+                    'pool_id': pool.get('pool', ''),
+                }
+                
+                kb.add_pool(pool_data)
+            
+            # Generate graph data for visualization
+            graph_data = kb.get_graph_data()
+            
+            print(f"✅ Created MeTTa knowledge base: {len(graph_data.get('nodes', []))} nodes, {len(graph_data.get('edges', []))} edges")
+            
+            return {
+                'metta_facts': kb.facts,
+                'metta_rules': kb.rules,
+                'metta_string': kb.to_metta_string(),
+                'graph_data': graph_data,
+                'safe_pools': kb.query_safe_pools(),
+            }
+        except Exception as e:
+            print(f"❌ Error creating MeTTa knowledge base: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
     @staticmethod
     def analyze_pools_with_ai(

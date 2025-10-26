@@ -22,6 +22,8 @@ class SwapParser:
         "usdt": {"symbol": "USDT", "name": "Tether", "decimals": 6},
         "eth": {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
         "ethereum": {"symbol": "ETH", "name": "Ethereum", "decimals": 18},
+        "fet": {"symbol": "FET", "name": "Fetch.ai", "decimals": 18},
+        "fetch": {"symbol": "FET", "name": "Fetch.ai", "decimals": 18},
         "btc": {"symbol": "BTC", "name": "Bitcoin", "decimals": 8},
         "bitcoin": {"symbol": "BTC", "name": "Bitcoin", "decimals": 8},
         "bonk": {"symbol": "BONK", "name": "Bonk", "decimals": 5},
@@ -45,8 +47,12 @@ class SwapParser:
         "eth_sol": 1/0.045,
         "usdc_usdt": 1.0,
         "usdt_usdc": 1.0,
-        "eth_usdc": 3000.0,
-        "usdc_eth": 1/3000.0,
+        "eth_usdc": 3800.0,
+        "usdc_eth": 1/3800.0,
+        "eth_fet": 1000.0,  # 1 ETH = 1000 FET
+        "fet_eth": 1/1000.0,
+        "fet_usdc": 3.8,  # FET price ~$3.80 (3800/1000)
+        "usdc_fet": 1/3.8,
         "base_usdc": 1.0,  # BASE is ETH on Base network
         "usdc_base": 1.0,
         "eth_base": 1.0,

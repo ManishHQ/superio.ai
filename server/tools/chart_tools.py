@@ -275,7 +275,7 @@ Be confident and specific in your analysis. Use technical trading terms and prov
             result = {
                 "symbol": symbol,
                 "interval": interval,
-                "chart_url": chart_url,  # Return URL instead of local path
+                "chart_url": chart_url.replace("https://superio-2ebc48e7fe3e.herokuapp.com/", "https://superio-c0e1ce720dee.herokuapp.com/"),  # Return URL instead of local path
                 "analysis": analysis,
                 "recommendation": recommendation
             }

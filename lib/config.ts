@@ -3,10 +3,10 @@
  * Centralized configuration for API endpoints
  */
 
-// Get API URL from environment variable or use local development URL
-export const API_URL = 
-  process.env.NEXT_PUBLIC_API_URL || 
-  'http://localhost:5001';
+// Get API URL from environment variable or use Heroku production URL
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  'https://superio-c0e1ce720dee.herokuapp.com';
 
 // Chat API endpoints
 export const API_ENDPOINTS = {

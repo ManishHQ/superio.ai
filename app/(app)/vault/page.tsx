@@ -1,24 +1,10 @@
 "use client";
 
 import React, {useState} from "react";
-import {
-    ArrowUpRight,
-    ArrowDownLeft,
-    TrendingUp,
-    Zap,
-    Lock,
-    DollarSign,
-    Loader2,
-    CheckCircle,
-    AlertCircle,
-} from "lucide-react";
+import {ArrowUpRight, ArrowDownLeft, TrendingUp, Zap, Lock, DollarSign, Loader2} from "lucide-react";
 import {Button} from "@/components/ui/button";
-import {useAccount, useWriteContract, useReadContract} from "wagmi";
+import {useAccount} from "wagmi";
 import {useVaultData} from "@/lib/hooks/useVaultData";
-import {VAULT_ADDRESS, MOCK_TOKEN_ADDRESS} from "@/lib/contracts";
-import {VAULT_ABI} from "@/lib/abis/vault-abi";
-import {MOCK_TOKEN_ABI} from "@/lib/abis/token-abi";
-import {parseUnits} from "viem";
 
 export default function VaultPage() {
     const {address} = useAccount();
@@ -26,189 +12,33 @@ export default function VaultPage() {
     const [activeTab, setActiveTab] = useState<"deposit" | "redeem">("deposit");
     const [depositAmount, setDepositAmount] = useState("");
     const [redeemAmount, setRedeemAmount] = useState("");
-    const [txStatus, setTxStatus] = useState<"idle" | "approving" | "depositing" | "withdrawing" | "success" | "error">(
-        "idle"
-    );
-    const [txMessage, setTxMessage] = useState("");
-    const [txHash, setTxHash] = useState<string>("");
-
-    // Deposit logs state
-    const [depositLogs, setDepositLogs] = useState<
-        Array<{
-            txHash: string;
-            amount: string;
-            timestamp: number;
-            status: "success" | "error";
-        }>
-    >([
-        {
-            txHash: "0x7a4f8b2c5d9e1f3a8c7b6e4d2f9a1c3e",
-            amount: "10",
-            timestamp: Date.now() - 7200000, // 2 hours ago
-            status: "success",
-        },
-        {
-            txHash: "0x3c1e9f7a2b5d8e1f4a7c6b3e9d2f5a8c",
-            amount: "25",
-            timestamp: Date.now() - 86400000, // 1 day ago
-            status: "success",
-        },
-        {
-            txHash: "0x5d2b4e8f1a9c7e3f2d6b8a4c5e9f1d3b",
-            amount: "50",
-            timestamp: Date.now() - 432000000, // 5 days ago
-            status: "success",
-        },
-    ]);
-
-    // Get token decimals
-    const {data: tokenDecimals} = useReadContract({
-        address: MOCK_TOKEN_ADDRESS,
-        abi: [
-            {
-                type: "function",
-                name: "decimals",
-                inputs: [],
-                outputs: [{name: "", type: "uint8", internalType: "uint8"}],
-                stateMutability: "view",
-            },
-        ],
-        functionName: "decimals",
-    });
-
-    // Get current allowance
-    const {data: currentAllowance, refetch: refetchAllowance} = useReadContract({
-        address: "0x104Bc7F7E441A01dCDA73cA16Fb40399D9C97E53" as `0x${string}`,
-        abi: MOCK_TOKEN_ABI,
-        functionName: "allowance",
-        args: [address || "0x0", VAULT_ADDRESS],
-        query: {
-            enabled: !!address,
-        },
-    });
-
-    // Get user token balance
-    const {data: userTokenBalance} = useReadContract({
-        address: MOCK_TOKEN_ADDRESS,
-        abi: MOCK_TOKEN_ABI,
-        functionName: "balanceOf",
-        args: [address || "0x0"],
-        query: {
-            enabled: !!address,
-        },
-    });
-
-    const {writeContractAsync: approveToken} = useWriteContract();
-    const {writeContractAsync: depositToVault} = useWriteContract();
-    const {writeContractAsync: redeemFromVault} = useWriteContract();
+    const [isLoading, setIsLoading] = useState(false);
 
     const handleDeposit = async () => {
-        console.log("Token Decimals: ", tokenDecimals);
-        if (!address || !depositAmount || !tokenDecimals || parseFloat(depositAmount) <= 0) {
-            setTxStatus("error");
-            setTxMessage("Please connect wallet and enter a valid amount");
-            return;
-        }
-
+        setIsLoading(true);
         try {
-            const amountInWei = parseUnits(depositAmount, tokenDecimals);
-
-            // Check allowance
-            if (!currentAllowance || currentAllowance < amountInWei) {
-                setTxStatus("approving");
-                setTxMessage("Approving token spend...");
-
-                // Request approval
-                const approveTx = await approveToken({
-                    address: MOCK_TOKEN_ADDRESS,
-                    abi: MOCK_TOKEN_ABI,
-                    functionName: "approve",
-                    args: [VAULT_ADDRESS, amountInWei],
-                });
-
-                setTxHash(approveTx);
-                await refetchAllowance();
-            }
-
-            // Deposit
-            setTxStatus("depositing");
-            setTxMessage("Depositing to vault...");
-
-            const depositTx = await depositToVault({
-                address: VAULT_ADDRESS,
-                abi: VAULT_ABI,
-                functionName: "deposit",
-                args: [amountInWei, address],
-                gas: BigInt(500000),
-            });
-
-            setTxHash(depositTx);
-            setTxStatus("success");
-            setTxMessage(`Deposit successful! Tx: ${depositTx.slice(0, 10)}...`);
-
-            // Add to deposit logs
-            setDepositLogs((prev) => [
-                {
-                    txHash: depositTx,
-                    amount: depositAmount,
-                    timestamp: Date.now(),
-                    status: "success",
-                },
-                ...prev,
-            ]);
-
+            // TODO: Call vault contract deposit function
+            console.log("Depositing:", depositAmount);
+            // await vault.deposit(depositAmount)
             setDepositAmount("");
         } catch (error) {
-            console.error("Deposit error:", error);
-            setTxStatus("error");
-            setTxMessage(error instanceof Error ? error.message : "Deposit failed");
-
-            // Add failed deposit to logs if txHash exists
-            if (txHash) {
-                setDepositLogs((prev) => [
-                    ...prev,
-                    {
-                        txHash: txHash,
-                        amount: depositAmount,
-                        timestamp: Date.now(),
-                        status: "error",
-                    },
-                ]);
-            }
+            console.error("Deposit failed:", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
-    const handleWithdrawAll = async () => {
-        if (!address || !vaultData.userBalance) {
-            setTxStatus("error");
-            setTxMessage("No shares to redeem");
-            return;
-        }
-
+    const handleRedeem = async () => {
+        setIsLoading(true);
         try {
-            setTxStatus("withdrawing");
-            setTxMessage("Withdrawing all shares...");
-
-            const withdrawTx = await redeemFromVault({
-                address: VAULT_ADDRESS,
-                abi: VAULT_ABI,
-                functionName: "redeem",
-                args: [vaultData.userBalance, address, address],
-            });
-
-            setTxHash(withdrawTx);
-            setTxStatus("success");
-            setTxMessage(`Withdrawal successful! Tx: ${withdrawTx.slice(0, 10)}...`);
+            // TODO: Call vault contract redeem function
+            console.log("Redeeming:", redeemAmount);
+            // await vault.redeem(redeemAmount)
             setRedeemAmount("");
-
-            // Refresh data
-            setTimeout(() => {
-                window.location.reload();
-            }, 2000);
         } catch (error) {
-            console.error("Withdraw error:", error);
-            setTxStatus("error");
-            setTxMessage(error instanceof Error ? error.message : "Withdrawal failed");
+            console.error("Redeem failed:", error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -359,65 +189,12 @@ export default function VaultPage() {
                                         </div>
                                     </div>
 
-                                    {/* Transaction Status */}
-                                    {txStatus !== "idle" && (
-                                        <div
-                                            className={`rounded-lg p-4 flex items-center gap-3 ${
-                                                txStatus === "success"
-                                                    ? "bg-green-500/20 border border-green-500/30"
-                                                    : txStatus === "error"
-                                                    ? "bg-red-500/20 border border-red-500/30"
-                                                    : "bg-blue-500/20 border border-blue-500/30"
-                                            }`}
-                                        >
-                                            {txStatus === "success" ? (
-                                                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-                                            ) : txStatus === "error" ? (
-                                                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-                                            ) : (
-                                                <Loader2 className="w-5 h-5 text-blue-400 animate-spin flex-shrink-0" />
-                                            )}
-                                            <div className="flex-1 overflow-hidden">
-                                                <p
-                                                    className={`text-sm ${
-                                                        txStatus === "success"
-                                                            ? "text-green-300"
-                                                            : txStatus === "error"
-                                                            ? "text-red-300"
-                                                            : "text-blue-300"
-                                                    }`}
-                                                >
-                                                    {txMessage}
-                                                </p>
-                                                {txHash && (
-                                                    <a
-                                                        href={`https://sepolia.etherscan.io/tx/${txHash}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-xs text-blue-400 hover:text-blue-300 underline mt-1 block"
-                                                    >
-                                                        View on Etherscan →
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
                                     <Button
                                         onClick={handleDeposit}
-                                        disabled={
-                                            !depositAmount || txStatus === "approving" || txStatus === "depositing"
-                                        }
+                                        disabled={!depositAmount || isLoading}
                                         className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 text-white font-medium py-3 rounded-lg transition-all"
                                     >
-                                        {txStatus === "approving" || txStatus === "depositing" ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 animate-spin mr-2 inline" />
-                                                {txStatus === "approving" ? "Approving..." : "Depositing..."}
-                                            </>
-                                        ) : (
-                                            "Deposit Now"
-                                        )}
+                                        {isLoading ? "Processing..." : "Deposit Now"}
                                     </Button>
                                 </div>
                             )}
@@ -425,18 +202,21 @@ export default function VaultPage() {
                             {/* Redeem Tab */}
                             {activeTab === "redeem" && (
                                 <div className="space-y-4">
-                                    <div className="bg-slate-700/30 rounded-lg p-4">
-                                        <div className="flex justify-between mb-2">
-                                            <span className="text-slate-300">Your Vault Shares</span>
-                                            <span className="text-white font-medium">
-                                                {(Number(vaultData.userBalance) / 1e18).toFixed(2)} shares
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-slate-300">USD Value</span>
-                                            <span className="text-white font-medium">
-                                                ${vaultData.userBalanceUSD.toFixed(2)}
-                                            </span>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-300 mb-2">
+                                            Amount to Redeem
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                value={redeemAmount}
+                                                onChange={(e) => setRedeemAmount(e.target.value)}
+                                                placeholder="Enter amount"
+                                                className="w-full bg-slate-700/50 border border-slate-600/50 rounded-lg px-4 py-3 text-white placeholder-slate-400 focus:outline-none focus:border-purple-500/50 focus:ring-2 focus:ring-purple-500/20"
+                                            />
+                                            <button className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-400 hover:text-purple-300 text-sm font-medium">
+                                                MAX
+                                            </button>
                                         </div>
                                     </div>
 
@@ -444,78 +224,23 @@ export default function VaultPage() {
                                         <div className="flex justify-between mb-2">
                                             <span className="text-slate-300">You'll receive</span>
                                             <span className="text-white font-medium">
-                                                ${vaultData.userBalanceUSD.toFixed(2)}
+                                                ${(parseFloat(redeemAmount) * 1.05).toFixed(2)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-slate-300">Estimated yield</span>
+                                            <span className="text-slate-300">Including yield</span>
                                             <span className="text-green-400 text-sm">
-                                                +$
-                                                {(
-                                                    vaultData.totalYieldEarned *
-                                                    (vaultData.userBalanceUSD / (Number(vaultData.totalAssets) / 1e18))
-                                                ).toFixed(2)}
+                                                +${(parseFloat(redeemAmount) * 0.05).toFixed(2)}
                                             </span>
                                         </div>
                                     </div>
 
-                                    {/* Transaction Status */}
-                                    {txStatus !== "idle" && (
-                                        <div
-                                            className={`rounded-lg p-4 flex items-center gap-3 ${
-                                                txStatus === "success"
-                                                    ? "bg-green-500/20 border border-green-500/30"
-                                                    : txStatus === "error"
-                                                    ? "bg-red-500/20 border border-red-500/30"
-                                                    : "bg-blue-500/20 border border-blue-500/30"
-                                            }`}
-                                        >
-                                            {txStatus === "success" ? (
-                                                <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-                                            ) : txStatus === "error" ? (
-                                                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-                                            ) : (
-                                                <Loader2 className="w-5 h-5 text-blue-400 animate-spin flex-shrink-0" />
-                                            )}
-                                            <div className="flex-1">
-                                                <p
-                                                    className={`text-sm ${
-                                                        txStatus === "success"
-                                                            ? "text-green-300"
-                                                            : txStatus === "error"
-                                                            ? "text-red-300"
-                                                            : "text-blue-300"
-                                                    }`}
-                                                >
-                                                    {txMessage}
-                                                </p>
-                                                {txHash && (
-                                                    <a
-                                                        href={`https://etherscan.io/tx/${txHash}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-xs text-blue-400 hover:text-blue-300 underline mt-1 block"
-                                                    >
-                                                        View on Etherscan →
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
                                     <Button
-                                        onClick={handleWithdrawAll}
-                                        disabled={!vaultData.userBalance || txStatus === "withdrawing"}
+                                        onClick={handleRedeem}
+                                        disabled={!redeemAmount || isLoading}
                                         className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 disabled:opacity-50 text-white font-medium py-3 rounded-lg transition-all"
                                     >
-                                        {txStatus === "withdrawing" ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 animate-spin mr-2 inline" />
-                                                Withdrawing...
-                                            </>
-                                        ) : (
-                                            "Withdraw All"
-                                        )}
+                                        {isLoading ? "Processing..." : "Redeem Now"}
                                     </Button>
                                 </div>
                             )}
@@ -570,67 +295,6 @@ export default function VaultPage() {
                         multiple yield strategies. Redeem anytime to withdraw your assets plus any earned yield. Yield
                         is calculated based on your share proportion in the vault.
                     </p>
-                </div>
-
-                {/* Activity Logs Section */}
-                <div className="mt-8 bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 backdrop-blur-sm">
-                    <h3 className="text-lg font-bold text-white mb-6">Deposit Activity</h3>
-
-                    {depositLogs.length === 0 ? (
-                        <div className="text-center py-8">
-                            <p className="text-slate-400 text-sm">No deposits yet</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {depositLogs.map((log, index) => (
-                                <div
-                                    key={index}
-                                    className="bg-slate-700/30 rounded-lg p-4 hover:bg-slate-700/50 transition-colors border border-slate-600/30"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div className="flex items-start gap-3 flex-1">
-                                            <div className="p-2 bg-blue-500/20 rounded-lg flex-shrink-0 mt-0.5">
-                                                <ArrowDownLeft className="w-4 h-4 text-blue-400" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-white font-medium">Deposit</p>
-                                                <p className="text-slate-400 text-xs mt-1">
-                                                    Deposited {log.amount} MOCK tokens to vault
-                                                </p>
-                                                <p className="text-slate-500 text-xs mt-2 font-mono">
-                                                    {log.txHash.slice(0, 10)}...{log.txHash.slice(-8)}
-                                                </p>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <p className="text-slate-500 text-xs">
-                                                        {new Date(log.timestamp).toLocaleString()}
-                                                    </p>
-                                                    <span
-                                                        className={`text-xs px-2 py-1 rounded font-medium ${
-                                                            log.status === "success"
-                                                                ? "bg-green-500/20 text-green-300"
-                                                                : "bg-red-500/20 text-red-300"
-                                                        }`}
-                                                    >
-                                                        {log.status === "success" ? "✓ Success" : "✗ Failed"}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex-shrink-0">
-                                            <a
-                                                href={`https://etherscan.io/tx/${log.txHash}`}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-blue-400 hover:text-blue-300 transition-colors p-2"
-                                            >
-                                                <ArrowUpRight className="w-4 h-4" />
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

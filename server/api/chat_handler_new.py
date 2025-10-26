@@ -225,8 +225,8 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                 if chart_result.get("chart_url") and not chart_result.get("error"):
                     import os
                     filename = os.path.basename(chart_result["chart_url"])
-                    # Use environment variable for API URL, fallback to localhost
-                    api_url = os.getenv("API_URL", "http://localhost:5001")
+                    # Use environment variable for API URL, fallback to working Heroku URL
+                    api_url = os.getenv("API_URL", "https://superio-c0e1ce720dee.herokuapp.com")
                     chart_url = f"{api_url}/api/chart/{filename}"
                     print(f"📸 Converted chart path to URL: {chart_url}")
 

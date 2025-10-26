@@ -1,1 +1,1 @@
-web: cd server && chmod +x scripts/start_heroku.sh && ./scripts/start_heroku.sh
+web: cd server && python -m api.server

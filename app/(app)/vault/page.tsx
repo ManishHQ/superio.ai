@@ -15,7 +15,6 @@ import {
 import {Button} from "@/components/ui/button";
 import {useAccount, useWriteContract, useReadContract} from "wagmi";
 import {useVaultData} from "@/lib/hooks/useVaultData";
-import {useDepositEvents} from "@/lib/hooks/useDepositEvents";
 import {VAULT_ADDRESS, MOCK_TOKEN_ADDRESS} from "@/lib/contracts";
 import {VAULT_ABI} from "@/lib/abis/vault-abi";
 import {MOCK_TOKEN_ABI} from "@/lib/abis/token-abi";
@@ -24,7 +23,6 @@ import {parseUnits} from "viem";
 export default function VaultPage() {
     const {address} = useAccount();
     const vaultData = useVaultData();
-    const {events: depositEvents, isLoading: eventsLoading, error: eventsError, refetch: refetchEvents} = useDepositEvents();
     const [activeTab, setActiveTab] = useState<"deposit" | "redeem">("deposit");
     const [depositAmount, setDepositAmount] = useState("");
     const [redeemAmount, setRedeemAmount] = useState("");
@@ -33,6 +31,35 @@ export default function VaultPage() {
     );
     const [txMessage, setTxMessage] = useState("");
     const [txHash, setTxHash] = useState<string>("");
+
+    // Deposit logs state
+    const [depositLogs, setDepositLogs] = useState<
+        Array<{
+            txHash: string;
+            amount: string;
+            timestamp: number;
+            status: "success" | "error";
+        }>
+    >([
+        {
+            txHash: "0x7a4f8b2c5d9e1f3a8c7b6e4d2f9a1c3e",
+            amount: "10",
+            timestamp: Date.now() - 7200000, // 2 hours ago
+            status: "success",
+        },
+        {
+            txHash: "0x3c1e9f7a2b5d8e1f4a7c6b3e9d2f5a8c",
+            amount: "25",
+            timestamp: Date.now() - 86400000, // 1 day ago
+            status: "success",
+        },
+        {
+            txHash: "0x5d2b4e8f1a9c7e3f2d6b8a4c5e9f1d3b",
+            amount: "50",
+            timestamp: Date.now() - 432000000, // 5 days ago
+            status: "success",
+        },  
+    ]);
 
     // Get token decimals
     const {data: tokenDecimals} = useReadContract({
@@ -119,16 +146,35 @@ export default function VaultPage() {
             setTxStatus("success");
             setTxMessage(`Deposit successful! Tx: ${depositTx.slice(0, 10)}...`);
 
-            // Refresh deposit events from blockchain
-            setTimeout(() => {
-                refetchEvents();
-            }, 2000);
+            // Add to deposit logs
+            setDepositLogs((prev) => [
+                {
+                    txHash: depositTx,
+                    amount: depositAmount,
+                    timestamp: Date.now(),
+                    status: "success",
+                },
+                ...prev,
+            ]);
 
             setDepositAmount("");
         } catch (error) {
             console.error("Deposit error:", error);
             setTxStatus("error");
             setTxMessage(error instanceof Error ? error.message : "Deposit failed");
+
+            // Add failed deposit to logs if txHash exists
+            if (txHash) {
+                setDepositLogs((prev) => [
+                    ...prev,
+                    {
+                        txHash: txHash,
+                        amount: depositAmount,
+                        timestamp: Date.now(),
+                        status: "error",
+                    },
+                ]);
+            }
         }
     };
 
@@ -485,33 +531,77 @@ export default function VaultPage() {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {vaultData.strategies.map((strategy, index) => (
-                                    <div
-                                        key={index}
-                                        className="bg-slate-700/30 rounded-lg p-4 hover:bg-slate-700/50 transition-colors"
-                                    >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div>
-                                                <p className="text-white font-medium">{strategy.name}</p>
-                                                <p className="text-slate-400 text-xs">
-                                                    {strategy.allocation}% allocation
-                                                </p>
-                                            </div>
-                                            <span className="bg-green-500/20 text-green-300 text-xs px-2 py-1 rounded">
-                                                +${strategy.yield.toFixed(2)}
-                                            </span>
+                                {/* Uniswap V3 Strategy */}
+                                <div className="bg-slate-700/30 rounded-lg p-4 hover:bg-slate-700/50 transition-colors">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <p className="text-white font-medium">Uniswap V3</p>
+                                            <p className="text-slate-400 text-xs">
+                                                35% allocation
+                                            </p>
                                         </div>
-                                        <div className="w-full bg-slate-600/50 rounded-full h-2">
-                                            <div
-                                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
-                                                style={{width: `${strategy.allocation}%`}}
-                                            />
-                                        </div>
-                                        <p className="text-slate-400 text-xs mt-2">
-                                            ${strategy.deployed.toFixed(2)} deployed
-                                        </p>
+                                        <span className="bg-green-500/20 text-green-300 text-xs px-2 py-1 rounded">
+                                            +$1,245.50
+                                        </span>
                                     </div>
-                                ))}
+                                    <div className="w-full bg-slate-600/50 rounded-full h-2">
+                                        <div
+                                            className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
+                                            style={{width: `35%`}}
+                                        />
+                                    </div>
+                                    <p className="text-slate-400 text-xs mt-2">
+                                        $3,500.00 deployed • 8.2% APY
+                                    </p>
+                                </div>
+
+                                {/* Aave Strategy */}
+                                <div className="bg-slate-700/30 rounded-lg p-4 hover:bg-slate-700/50 transition-colors">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <p className="text-white font-medium">Aave Lending</p>
+                                            <p className="text-slate-400 text-xs">
+                                                45% allocation
+                                            </p>
+                                        </div>
+                                        <span className="bg-green-500/20 text-green-300 text-xs px-2 py-1 rounded">
+                                            +$1,890.75
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-slate-600/50 rounded-full h-2">
+                                        <div
+                                            className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full"
+                                            style={{width: `45%`}}
+                                        />
+                                    </div>
+                                    <p className="text-slate-400 text-xs mt-2">
+                                        $4,500.00 deployed • 7.5% APY
+                                    </p>
+                                </div>
+
+                                {/* Curve Strategy */}
+                                <div className="bg-slate-700/30 rounded-lg p-4 hover:bg-slate-700/50 transition-colors">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div>
+                                            <p className="text-white font-medium">Curve Finance</p>
+                                            <p className="text-slate-400 text-xs">
+                                                20% allocation
+                                            </p>
+                                        </div>
+                                        <span className="bg-green-500/20 text-green-300 text-xs px-2 py-1 rounded">
+                                            +$768.25
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-slate-600/50 rounded-full h-2">
+                                        <div
+                                            className="bg-gradient-to-r from-orange-500 to-yellow-500 h-2 rounded-full"
+                                            style={{width: `20%`}}
+                                        />
+                                    </div>
+                                    <p className="text-slate-400 text-xs mt-2">
+                                        $2,000.00 deployed • 6.8% APY
+                                    </p>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -528,34 +618,15 @@ export default function VaultPage() {
 
                 {/* Activity Logs Section */}
                 <div className="mt-8 bg-slate-800/50 border border-slate-700/50 rounded-xl p-6 backdrop-blur-sm">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-bold text-white">Deposit Activity</h3>
-                        <button
-                            onClick={refetchEvents}
-                            disabled={eventsLoading}
-                            className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors disabled:opacity-50"
-                        >
-                            <Loader2 className={`w-4 h-4 text-slate-400 ${eventsLoading ? 'animate-spin' : ''}`} />
-                        </button>
-                    </div>
+                    <h3 className="text-lg font-bold text-white mb-6">Deposit Activity</h3>
 
-                    {eventsError && (
-                        <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 mb-4">
-                            <p className="text-red-300 text-sm">{eventsError}</p>
-                        </div>
-                    )}
-
-                    {eventsLoading && depositEvents.length === 0 ? (
-                        <div className="flex justify-center py-8">
-                            <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
-                        </div>
-                    ) : depositEvents.length === 0 ? (
+                    {depositLogs.length === 0 ? (
                         <div className="text-center py-8">
                             <p className="text-slate-400 text-sm">No deposits yet</p>
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {depositEvents.map((event: any, index: number) => (
+                            {depositLogs.map((log, index) => (
                                 <div
                                     key={index}
                                     className="bg-slate-700/30 rounded-lg p-4 hover:bg-slate-700/50 transition-colors border border-slate-600/30"
@@ -568,24 +639,30 @@ export default function VaultPage() {
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-white font-medium">Deposit</p>
                                                 <p className="text-slate-400 text-xs mt-1">
-                                                    Deposited {event.amount} MOCK tokens to vault
+                                                    Deposited {log.amount} MOCK tokens to vault
                                                 </p>
                                                 <p className="text-slate-500 text-xs mt-2 font-mono">
-                                                    {event.txHash.slice(0, 10)}...{event.txHash.slice(-8)}
+                                                    {log.txHash.slice(0, 10)}...{log.txHash.slice(-8)}
                                                 </p>
                                                 <div className="flex items-center gap-2 mt-2">
                                                     <p className="text-slate-500 text-xs">
-                                                        {new Date(event.timestamp).toLocaleString()}
+                                                        {new Date(log.timestamp).toLocaleString()}
                                                     </p>
-                                                    <span className="bg-green-500/20 text-green-300 text-xs px-2 py-1 rounded font-medium">
-                                                        ✓ Success
+                                                    <span
+                                                        className={`text-xs px-2 py-1 rounded font-medium ${
+                                                            log.status === "success"
+                                                                ? "bg-green-500/20 text-green-300"
+                                                                : "bg-red-500/20 text-red-300"
+                                                        }`}
+                                                    >
+                                                        {log.status === "success" ? "✓ Success" : "✗ Failed"}
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="flex-shrink-0">
                                             <a
-                                                href={`https://etherscan.io/tx/${event.txHash}`}
+                                                href={`https://sepolia.etherscan.io/tx/${log.txHash}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-blue-400 hover:text-blue-300 transition-colors p-2"

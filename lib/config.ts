@@ -6,7 +6,7 @@
 // Get API URL from environment variable or use Heroku production URL
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  'https://superio-c0e1ce720dee.herokuapp.com';
+  'https://superio-2ebc48e7fe3e.herokuapp.com';
 
 // Chat API endpoints
 export const API_ENDPOINTS = {

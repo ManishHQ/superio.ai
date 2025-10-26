@@ -267,15 +267,15 @@ Be confident and specific in your analysis. Use technical trading terms and prov
                 recommendation = "HOLD"
             
             # Convert local path to URL
-            chart_url = chart_path  # Keep as-is for now, will be converted in chat_handler
             filename = os.path.basename(chart_path)
-            api_url = "https://superio-c0e1ce720dee.herokuapp.com"
+            # Use environment variable, fallback to working Heroku URL
+            api_url = os.getenv("API_URL", "https://superio-c0e1ce720dee.herokuapp.com")
             chart_url = f"{api_url}/api/chart/{filename}"
             
             result = {
                 "symbol": symbol,
                 "interval": interval,
-                "chart_url": chart_url.replace("https://superio-2ebc48e7fe3e.herokuapp.com/", "https://superio-c0e1ce720dee.herokuapp.com/"),  # Return URL instead of local path
+                "chart_url": chart_url,
                 "analysis": analysis,
                 "recommendation": recommendation
             }

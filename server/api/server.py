@@ -170,6 +170,33 @@ def chat():
         print(f"Message: {message}")
         print(f"User ID: {user_id}")
 
+        # Import database and services
+        from db.chat_history_db import db
+        from services.summarizer import ChatSummarizer
+
+        # Get recent chat history for context
+        context = ""
+        if user_id and user_id != 'anonymous' and user_id != 'web_user':
+            try:
+                recent_messages = db.get_recent_messages(user_id, limit=5)
+                if recent_messages:
+                    context = ChatSummarizer.create_context_string(recent_messages)
+                    print(f"📝 Loaded {len(recent_messages)} messages for context")
+            except Exception as e:
+                print(f"⚠️ Failed to load context: {e}")
+
+        # Save user message to database
+        if user_id and user_id != 'anonymous' and user_id != 'web_user':
+            try:
+                db.add_message(
+                    wallet_address=user_id,
+                    role='user',
+                    content=message
+                )
+                print(f"✅ Saved user message to database")
+            except Exception as e:
+                print(f"⚠️ Failed to save user message: {e}")
+
         # Import tools
         from tools.defi_tools import CoinGeckoAPI, FearGreedIndexAPI, extract_recommendation, ASI1API
         from tools.yield_tools import DeFiLlamaYields, YieldAnalyzer, YIELD_TOOLS
@@ -192,10 +219,45 @@ def chat():
             base_url="https://api.asi1.ai/v1"
         )
 
-        # Use the AI-driven chat handler
+        # Use the AI-driven chat handler with context
         from api.chat_handler_new import handle_chat_request
 
-        result = handle_chat_request(message, user_id, client, asi_key)
+        result = handle_chat_request(message, user_id, client, asi_key, context)
+        
+        # Save assistant response to database
+        if user_id and user_id != 'anonymous' and user_id != 'web_user':
+            try:
+                db.add_message(
+                    wallet_address=user_id,
+                    role='assistant',
+                    content=result.get('response', ''),
+                    metadata={
+                        'swap_ui': result.get('swap_ui'),
+                        'send_ui': result.get('send_ui'),
+                        'tools_used': result.get('tools_used'),
+                        'yield_pools': result.get('yield_pools'),
+                        'metta_knowledge': result.get('metta_knowledge'),
+                    }
+                )
+                print(f"✅ Saved assistant response to database")
+                
+                # Auto-update summary if needed
+                try:
+                    chat = db.get_chat_history(user_id)
+                    if chat and chat.get('messages'):
+                        message_count = len(chat['messages'])
+                        ChatSummarizer.update_summary_if_needed(
+                            user_id, 
+                            message_count, 
+                            db, 
+                            client
+                        )
+                except Exception as e:
+                    print(f"⚠️ Failed to update summary: {e}")
+                    
+            except Exception as e:
+                print(f"⚠️ Failed to save assistant response: {e}")
+        
         return jsonify(result), 200
 
     except Exception as e:
@@ -360,6 +422,86 @@ def get_protocol(protocol):
         return jsonify({"error": str(e)}), 500
 
 
+# ============= Chat History Endpoints =============
+
+@app.route('/api/chat/history', methods=['GET'])
+def get_chat_history():
+    """Get chat history for a wallet address"""
+    try:
+        wallet_address = request.args.get('wallet_address')
+        
+        if not wallet_address:
+            return jsonify({"error": "wallet_address parameter required"}), 400
+        
+        from db.chat_history_db import db
+        
+        history = db.get_chat_history(wallet_address)
+        
+        if not history:
+            return jsonify({
+                "wallet_address": wallet_address,
+                "summary": "New conversation",
+                "messages": []
+            }), 200
+        
+        return jsonify(history), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/chat/message', methods=['POST'])
+def add_chat_message():
+    """Add a message to chat history"""
+    try:
+        data = request.json
+        
+        wallet_address = data.get('wallet_address')
+        role = data.get('role')  # 'user' or 'assistant'
+        content = data.get('content')
+        metadata = data.get('metadata')
+        
+        if not wallet_address or not role or not content:
+            return jsonify({"error": "wallet_address, role, and content required"}), 400
+        
+        from db.chat_history_db import db
+        
+        success = db.add_message(wallet_address, role, content, metadata)
+        
+        if success:
+            return jsonify({"success": True}), 200
+        else:
+            return jsonify({"error": "Failed to add message"}), 500
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/chat/summary', methods=['PUT'])
+def update_chat_summary():
+    """Update chat summary"""
+    try:
+        data = request.json
+        
+        wallet_address = data.get('wallet_address')
+        summary = data.get('summary')
+        
+        if not wallet_address or not summary:
+            return jsonify({"error": "wallet_address and summary required"}), 400
+        
+        from db.chat_history_db import db
+        
+        success = db.update_summary(wallet_address, summary)
+        
+        if success:
+            return jsonify({"success": True}), 200
+        else:
+            return jsonify({"error": "Failed to update summary"}), 500
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 def get_timestamp():
     """Get current timestamp"""
     from datetime import datetime
@@ -380,6 +522,9 @@ if __name__ == '__main__':
     print(f"  - GET  /api/asi-health (Test ASI API)")
     print(f"  - POST /api/chat")
     print(f"  - GET  /api/agents")
+    print(f"  - GET  /api/chat/history?wallet_address=<address>")
+    print(f"  - POST /api/chat/message (Add message)")
+    print(f"  - PUT  /api/chat/summary (Update summary)")
     print(f"\nLogs will be printed to console...")
     sys.stdout.flush()
 

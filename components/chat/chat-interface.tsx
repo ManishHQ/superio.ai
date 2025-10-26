@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useAccount } from 'wagmi';
 import { ChatMessage, Message } from './message';
 import { ChatInput } from './chat-input';
 import { TypingIndicator } from './typing-indicator';
 import { Button } from '@/components/ui/button';
 
 export function ChatInterface() {
+  const { address } = useAccount();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -27,6 +29,52 @@ export function ChatInterface() {
     scrollToBottom();
   }, [messages, isTyping]);
 
+  // Load chat history when wallet address is available
+  useEffect(() => {
+    if (!address) return;
+
+    const loadChatHistory = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:5001/api/chat/history?wallet_address=${address}`
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.messages && data.messages.length > 0) {
+            // Convert DB messages to frontend format
+            const loadedMessages: Message[] = data.messages.map((msg: any) => ({
+              id: `hist-${msg.timestamp || Date.now()}`,
+              role: msg.role,
+              content: msg.content,
+              timestamp: new Date(msg.timestamp),
+              ...(msg.metadata?.swap_ui && { swap_ui: msg.metadata.swap_ui }),
+              ...(msg.metadata?.send_ui && { send_ui: msg.metadata.send_ui }),
+              ...(msg.metadata?.tools_used && { tools_used: msg.metadata.tools_used }),
+              ...(msg.metadata?.yield_pools && { yield_pools: msg.metadata.yield_pools }),
+              ...(msg.metadata?.metta_knowledge && { metta_knowledge: msg.metadata.metta_knowledge }),
+            }));
+
+            // Add welcome message at the start
+            const welcomeMessage: Message = {
+              id: '1',
+              role: 'assistant',
+              content: `Welcome back! Continuing from: "${data.summary || 'previous conversation'}"`,
+              timestamp: new Date(),
+            };
+
+            setMessages([welcomeMessage, ...loadedMessages]);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load chat history:', error);
+      }
+    };
+
+    loadChatHistory();
+  }, [address]);
+
   const handleSendMessage = async (content: string, files?: File[]) => {
     // Create user message
     const userMessage: Message = {
@@ -45,7 +93,7 @@ export function ChatInterface() {
     setIsTyping(true);
 
     try {
-      // Call the DeFi chat API
+      // Call the DeFi chat API (backend will save messages to database)
       const response = await fetch('http://localhost:5001/api/chat', {
         method: 'POST',
         headers: {
@@ -53,7 +101,7 @@ export function ChatInterface() {
         },
         body: JSON.stringify({
           message: content,
-          user_id: 'web_user',
+          user_id: address || 'web_user',
         }),
       });
 
@@ -73,9 +121,11 @@ export function ChatInterface() {
         ...(data.send_ui && { send_ui: data.send_ui }),
         ...(data.tools_used && { tools_used: data.tools_used }),
         ...(data.yield_pools && { yield_pools: data.yield_pools }),
+        ...(data.metta_knowledge && { metta_knowledge: data.metta_knowledge }),
       };
 
       setMessages((prev) => [...prev, aiMessage]);
+      // Note: Backend automatically saves messages to database
     } catch (error) {
       console.error('Failed to send message:', error);
       
@@ -93,7 +143,18 @@ export function ChatInterface() {
     }
   };
 
-  const handleClearChat = () => {
+  const handleClearChat = async () => {
+    // Clear chat history from database
+    if (address) {
+      try {
+        // Note: We'd need a DELETE endpoint for this
+        // For now, just clear the UI
+        console.log('Clearing chat for wallet:', address);
+      } catch (e) {
+        console.error('Failed to clear chat history:', e);
+      }
+    }
+
     setMessages([
       {
         id: '1',
@@ -129,6 +190,11 @@ export function ChatInterface() {
             <p className="text-xs text-muted-foreground">
               {isTyping ? 'Analyzing...' : 'Multi-Agent + ASI:One Powered'}
             </p>
+            {address && (
+              <p className="text-xs text-primary font-mono mt-1">
+                {address.slice(0, 6)}...{address.slice(-4)}
+              </p>
+            )}
           </div>
         </div>
 

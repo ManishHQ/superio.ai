@@ -47,6 +47,25 @@ export interface YieldPool {
   url: string;
 }
 
+export interface MeTTaKnowledge {
+  graph_data: {
+    nodes: Array<{
+      id: string;
+      type: string;
+      label: string;
+      properties: Record<string, any>;
+    }>;
+    edges: Array<{
+      from: string;
+      to: string;
+      relation: string;
+    }>;
+  };
+  safe_pools?: string[];
+  facts_count?: number;
+  rules_count?: number;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -156,8 +175,9 @@ export function ChatMessage({ message }: MessageProps) {
             </div>
           )}
 
-          {/* Tools Used Display */}
-          {message.tools_used && message.tools_used.length > 0 && (
+          {/* Tools Used Display - Only show for non-general conversations */}
+          {message.tools_used && message.tools_used.length > 0 && 
+           !message.tools_used.some(tool => tool.name === 'General Conversation') && (
             <div className="mt-3 p-3 bg-background border border-border rounded-lg space-y-2">
               <div className="flex items-center gap-2 mb-2">
                 <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -165,32 +185,34 @@ export function ChatMessage({ message }: MessageProps) {
                 </svg>
                 <span className="text-xs font-semibold text-muted-foreground">Data Sources Used</span>
               </div>
-              {message.tools_used.map((tool, idx) => (
-                <div key={idx} className="flex items-start gap-2 text-xs">
-                  <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-primary mt-1.5"></div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-foreground">{tool.name}</span>
-                      <span className="text-muted-foreground">•</span>
-                      <span className="text-primary">{tool.source}</span>
-                      {tool.results_count !== undefined && (
-                        <>
-                          <span className="text-muted-foreground">•</span>
-                          <span className="text-muted-foreground">{tool.results_count} results</span>
-                        </>
+              {message.tools_used
+                .filter(tool => tool.name !== 'General Conversation')
+                .map((tool, idx) => (
+                  <div key={idx} className="flex items-start gap-2 text-xs">
+                    <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-primary mt-1.5"></div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">{tool.name}</span>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="text-primary">{tool.source}</span>
+                        {tool.results_count !== undefined && (
+                          <>
+                            <span className="text-muted-foreground">•</span>
+                            <span className="text-muted-foreground">{tool.results_count} results</span>
+                          </>
+                        )}
+                      </div>
+                      {tool.filters && Object.keys(tool.filters).length > 0 && (
+                        <div className="mt-1 text-muted-foreground">
+                          Filters: {Object.entries(tool.filters)
+                            .filter(([_, value]) => value && value !== 'all')
+                            .map(([key, value]) => `${key}: ${value}`)
+                            .join(', ')}
+                        </div>
                       )}
                     </div>
-                    {tool.filters && Object.keys(tool.filters).length > 0 && (
-                      <div className="mt-1 text-muted-foreground">
-                        Filters: {Object.entries(tool.filters)
-                          .filter(([_, value]) => value && value !== 'all')
-                          .map(([key, value]) => `${key}: ${value}`)
-                          .join(', ')}
-                      </div>
-                    )}
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
 

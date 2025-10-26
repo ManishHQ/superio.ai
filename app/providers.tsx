@@ -9,6 +9,7 @@ import {
 import { WagmiProvider } from 'wagmi';
 import {
   mainnet,
+  sepolia,
   polygon,
   optimism,
   arbitrum,
@@ -22,7 +23,7 @@ import {
 const config = getDefaultConfig({
   appName: 'Next.js PWA App',
   projectId: '2f05ae7f1116030fde2d36508f472bfb', // Demo project ID - get your own at https://cloud.walletconnect.com
-  chains: [mainnet, polygon, optimism, arbitrum, base],
+  chains: [sepolia, mainnet, polygon, optimism, arbitrum, base],
   ssr: true,
 });
 

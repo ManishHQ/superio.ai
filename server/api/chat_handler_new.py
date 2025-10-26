@@ -3,10 +3,17 @@ New Chat Handler - AI-driven tool selection with always-on tools_used tracking
 Replace the /api/chat endpoint in server.py with this logic
 """
 
-def handle_chat_request(message, user_id, client, asi_key):
+def handle_chat_request(message, user_id, client, asi_key, context=""):
     """
     Handle chat request using AI function calling for tool selection
     Always returns tools_used in the response
+    
+    Args:
+        message: User message
+        user_id: User ID
+        client: OpenAI client
+        asi_key: ASI API key
+        context: Previous conversation context
     """
     from tools.defi_tools import CoinGeckoAPI, FearGreedIndexAPI, ASI1API
     from tools.yield_tools import DeFiLlamaYields, YieldAnalyzer, YIELD_TOOLS
@@ -38,11 +45,16 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
     all_tools = ACTION_TOOLS + YIELD_TOOLS
 
     try:
+        # Build user message with context
+        user_message = message
+        if context:
+            user_message = f"Previous conversation:\n{context}\n\nCurrent message: {message}"
+        
         # Let AI decide what to do
         response = client.chat.completions.create(
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": message}
+                {"role": "user", "content": user_message}
             ],
             model="asi1-mini",
             tools=all_tools,
@@ -198,14 +210,57 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                     final_response += f"\n\n**Analysis:**\n{ai_analysis}"
                 final_response += f"\n\n---\n📡 **Data Sources:** DeFiLlama API (live) • ASI:One Mini (analysis)"
 
+                # Create MeTTa knowledge graph
+                metta_kb = YieldAnalyzer.create_metta_knowledge_base(filtered_pools)
+                
+                # Prepare pools data for UI
+                pools_ui = []
+                for pool in filtered_pools[:10]:
+                    apy_base = pool.get('apy', 0) or 0
+                    apy_reward = pool.get('apyReward', 0) or 0
+                    apy_total = apy_base + apy_reward
+                    
+                    pools_ui.append({
+                        "pool_id": pool.get('pool', ''),
+                        "project": pool.get('project', 'Unknown'),
+                        "chain": pool.get('chain', 'Unknown'),
+                        "symbol": pool.get('symbol', 'Unknown'),
+                        "apy_total": round(apy_total, 2),
+                        "apy_base": round(apy_base, 2),
+                        "apy_reward": round(apy_reward, 2),
+                        "tvl": round(pool.get('tvlUsd', 0) or 0, 0),
+                        "url": pool.get('url', ''),
+                    })
+
                 tools_used[0]["source"] = "DeFiLlama API"
                 tools_used[0]["filters"] = function_args
                 tools_used[0]["results_count"] = len(filtered_pools)
 
-                return {
+                response_data = {
                     "response": final_response,
-                    "tools_used": tools_used
+                    "tools_used": tools_used,
+                    "yield_pools": pools_ui
                 }
+                
+                # Add MeTTa knowledge graph (always add, even if empty)
+                if metta_kb and metta_kb.get('graph_data'):
+                    response_data["metta_knowledge"] = {
+                        "graph_data": metta_kb.get('graph_data'),
+                        "safe_pools": metta_kb.get('safe_pools', []),
+                        "facts_count": len(metta_kb.get('metta_facts', [])),
+                        "rules_count": len(metta_kb.get('metta_rules', []))
+                    }
+                else:
+                    # Create empty graph structure as fallback
+                    print("⚠️ Warning: Could not create MeTTa knowledge base, using empty structure")
+                    response_data["metta_knowledge"] = {
+                        "graph_data": {"nodes": [], "edges": []},
+                        "safe_pools": [],
+                        "facts_count": 0,
+                        "rules_count": 0
+                    }
+                
+                return response_data
 
             elif function_name == "explain_transaction":
                 # Let AI explain with context

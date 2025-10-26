@@ -21,6 +21,7 @@ def handle_chat_request(message, user_id, client, asi_key, context=""):
     from agents.swap_agent import SwapParser
     from agents.send_agent import SendParser
     from agents.trading_agent import TradingAgent
+    from agents.blockscout_agent import BlockscoutAgent
     import os
     import json
 
@@ -39,12 +40,13 @@ Your capabilities:
 - **send_token**: Prepare send/transfer transactions for wallet signing (ALWAYS use this for send requests)
 - **swap_token**: Prepare token swap transactions for wallet signing (ALWAYS use this for swap requests)
 - **analyze_chart**: Analyze cryptocurrency or stock charts (DEFAULT: BINANCE, 1D timeframe - use these if not specified)
+- **lookup_transaction**: Look up and explain blockchain transactions on Ethereum Sepolia when user provides a transaction hash (ALWAYS use this for transaction hash lookups)
 - **get_crypto_info**: Get market data, prices, and analysis
 - **get_yield_pools**: Find and analyze DeFi yield farming opportunities
-- **explain_transaction**: Explain how blockchain transactions work
+- **explain_transaction**: Explain how blockchain transactions work in general
 - **General conversation**: Answer questions naturally
 
-IMPORTANT: For transaction requests (send/swap), you prepare the transaction - users sign it with their wallet. Always call the function!"""
+IMPORTANT: For transaction requests (send/swap), you prepare the transaction - users sign it with their wallet. Always call the function! When users provide a transaction hash (0x...), ALWAYS use lookup_transaction to look it up!"""
 
     # Combine all available tools
     all_tools = ACTION_TOOLS + YIELD_TOOLS
@@ -249,6 +251,114 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                     "chart_url": chart_result.get("chart_url"),
                     "chart_analysis": chart_result.get("analysis")
                 }
+            
+            elif function_name == "lookup_transaction":
+                # Handle transaction lookup using Blockscout agent
+                transaction_hash = function_args.get("transaction_hash", "").strip()
+                
+                if not transaction_hash or not transaction_hash.startswith("0x"):
+                    return {
+                        "response": "Invalid transaction hash. Please provide a valid Ethereum transaction hash (starting with 0x).",
+                        "tools_used": tools_used
+                    }
+                
+                # Use Ethereum Sepolia testnet
+                chain_id = "11155111"  # Ethereum Sepolia
+                
+                print(f"🔍 Looking up transaction {transaction_hash} on Sepolia...")
+                
+                # Initialize Blockscout agent
+                blockscout_agent = BlockscoutAgent()
+                
+                try:
+                    # Get detailed transaction info first
+                    tx_info = blockscout_agent.get_transaction_info(
+                        chain_id=chain_id,
+                        transaction_hash=transaction_hash,
+                        include_raw_input=False
+                    )
+                    
+                    # Get human-readable summary
+                    try:
+                        summary = blockscout_agent.transaction_summary(chain_id, transaction_hash)
+                        # Parse the summary JSON
+                        if isinstance(summary, str):
+                            summary_data = json.loads(summary)
+                        else:
+                            summary_data = summary
+                        
+                        # Extract readable summary text
+                        readable_summary = ""
+                        if summary_data and "data" in summary_data and "summary" in summary_data["data"]:
+                            summary_list = summary_data["data"]["summary"]
+                            if summary_list and len(summary_list) > 0:
+                                template = summary_list[0].get("summary_template", "")
+                                vars_dict = summary_list[0].get("summary_template_variables", {})
+                                
+                                # Replace variables in template
+                                readable_summary = template
+                                for key, value_info in vars_dict.items():
+                                    if isinstance(value_info, dict) and "value" in value_info:
+                                        value = value_info["value"]
+                                        if isinstance(value, dict):
+                                            if "hash" in value:
+                                                value = value["hash"]  # Use address hash
+                                            elif "ens_domain_name" in value and value.get("ens_domain_name"):
+                                                value = value["ens_domain_name"]  # Use ENS name
+                                        readable_summary = readable_summary.replace(f"{{{key}}}", str(value))
+                                
+                                # Replace any remaining unmatched variables
+                                readable_summary = readable_summary.replace("{native}", "ETH").replace("{to_address}", "(address)")
+                    except Exception as e:
+                        print(f"⚠️ Could not parse summary: {e}")
+                        readable_summary = "Transaction summary unavailable"
+                    
+                    # Build response
+                    response_text = f"📋 **Transaction Analysis**\n\n"
+                    
+                    if readable_summary:
+                        response_text += f"**Summary:** {readable_summary}\n\n"
+                    
+                    if tx_info:
+                        response_text += f"**Transaction Hash:** `{transaction_hash}`\n\n"
+                        
+                        if "from" in tx_info:
+                            response_text += f"**From:** `{tx_info['from']}`\n"
+                        if "to" in tx_info:
+                            response_text += f"**To:** `{tx_info['to']}`\n"
+                        if "value" in tx_info:
+                            # Convert wei to ETH
+                            value_wei = int(tx_info['value']) if tx_info['value'] else 0
+                            value_eth = value_wei / 1e18
+                            response_text += f"**Value:** {value_eth} ETH\n"
+                        if "gas_used" in tx_info and "gas_price" in tx_info:
+                            gas_used = int(tx_info.get('gas_used', 0))
+                            gas_price = int(tx_info.get('gas_price', 0))
+                            gas_cost = (gas_used * gas_price) / 1e18
+                            response_text += f"**Gas Used:** {gas_used:,}\n"
+                            response_text += f"**Gas Cost:** {gas_cost} ETH\n"
+                    
+                    tools_used[0]["source"] = "Blockscout MCP API"
+                    tools_used[0]["chain_id"] = chain_id
+                    
+                    return {
+                        "response": response_text,
+                        "tools_used": tools_used,
+                        "transaction_info": tx_info
+                    }
+                    
+                except Exception as e:
+                    print(f"❌ Error looking up transaction: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    
+                    return {
+                        "response": f"⚠️ Failed to look up transaction. Error: {str(e)}\n\nThis could be because:\n1. The transaction hash is not on Ethereum Sepolia testnet\n2. The transaction doesn't exist\n3. There was a network error",
+                        "tools_used": tools_used
+                    }
+                finally:
+                    # Cleanup agent
+                    del blockscout_agent
             
             elif function_name == "get_yield_pools":
                 # Handle yield pools (existing logic)

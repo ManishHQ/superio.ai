@@ -25,6 +25,16 @@ ALLOWED_ORIGINS = [
     "http://localhost:3001",
     "https://*.vercel.app",  # All Vercel preview deployments
     "https://superio.vercel.app",  # Production Vercel (update with your domain)
+    "https://www.superio.ai",
+    "https://superio.ai"
+    "https://blockscout.com"
+    "https://www.blockscout.com"
+    "https://blockscout.io"
+    "https://www.blockscout.io"
+    "https://blockscout.net"
+    "https://www.blockscout.net"
+    "https://blockscout.org"
+    "https://www.blockscout.org"
 ]
 
 # Check for custom frontend URL in environment

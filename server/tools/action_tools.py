@@ -86,5 +86,22 @@ ACTION_TOOLS = [
                 "required": ["symbol"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "lookup_transaction",
+            "description": "Look up and explain a blockchain transaction on Ethereum Sepolia testnet. Use this when user provides a transaction hash (0x...) and wants to know what happened in that transaction.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "transaction_hash": {
+                        "type": "string",
+                        "description": "The transaction hash (0x...) to look up on Ethereum Sepolia"
+                    }
+                },
+                "required": ["transaction_hash"]
+            }
+        }
     }
 ]

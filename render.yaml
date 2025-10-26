@@ -3,13 +3,17 @@ services:
   - type: web
     name: superio-backend
     runtime: python
+    region: oregon
+    plan: free
     buildCommand: "cd server && pip install -r requirements.txt"
-    startCommand: "cd server && python api/server.py"
+    startCommand: "cd server && chmod +x scripts/start_render.sh && ./scripts/start_render.sh"
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.19
       - key: FLASK_PORT
-        value: 5001
+        value: 10000
+      - key: FLASK_DEBUG
+        value: False
       - key: ASI_API_KEY
         sync: false
       - key: CHART_IMG_API_KEY
@@ -18,13 +22,11 @@ services:
         sync: false
       - key: MONGODBURI
         sync: false
-
-  # Frontend Service (optional - if deploying separately)
-  - type: web
-    name: superio-frontend
-    runtime: node
-    buildCommand: "yarn install && yarn build"
-    startCommand: "yarn start"
-    envVars:
-      - key: NODE_VERSION
-        value: 20.11.0
+      - key: COORDINATOR_PORT
+        value: 8000
+      - key: DEFI_AGENT_PORT
+        value: 8001
+      - key: FGI_AGENT_PORT
+        value: 8003
+      - key: COIN_AGENT_PORT
+        value: 8004

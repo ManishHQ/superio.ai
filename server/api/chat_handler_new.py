@@ -201,7 +201,7 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                 print(f"   API Key present: {bool(chart_api_key and chart_api_key != 'your_chart_img_api_key_here')}")
                 
                 # Create trading agent
-                trading_agent = TradingAgent(asi_client=client, chart_api_key=chart_api_key)
+                trading_agent = TradingAgent(chart_api_key=chart_api_key)
                 
                 # Analyze chart
                 chart_result = trading_agent.analyze_symbol(
@@ -226,7 +226,7 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                 tools_used[0]["chart_url"] = chart_url
                 tools_used[0]["recommendation"] = chart_result.get("recommendation")
                 
-                # Build response with chart
+                # Build response with chart (remove link, chart will be embedded via chart_url field)
                 response = f"📊 **Chart Analysis: {symbol}**\n\n"
 
                 if chart_result.get("error"):
@@ -234,9 +234,7 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                 else:
                     response += chart_result.get("analysis", "Analysis generated.")
 
-                    if chart_url:
-                        response += f"\n\n📈 [View Chart Image]({chart_url})"
-
+                    # Don't add link here - chart will be displayed via chart_url in the UI
                     recommendation = chart_result.get("recommendation", "HOLD")
                     if recommendation == "BUY":
                         response += f"\n\n🟢 **Recommendation: {recommendation}**"

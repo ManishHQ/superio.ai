@@ -1,0 +1,52 @@
+{
+  "name": "Superio AI Backend",
+  "description": "DeFi AI Assistant Backend with Multi-Agent System",
+  "keywords": ["python", "flask", "defi", "ai", "blockchain"],
+  "repository": "https://github.com/your-username/superio.ai",
+  "logo": "",
+  "success_url": "/api/health",
+  "stack": "heroku-22",
+  "buildpacks": [
+    {
+      "url": "heroku/python"
+    }
+  ],
+  "env": {
+    "ASI_API_KEY": {
+      "description": "ASI API Key for AI functionality",
+      "required": true
+    },
+    "CHART_IMG_API_KEY": {
+      "description": "Chart-IMG API Key for chart generation",
+      "required": true
+    },
+    "GOOGLE_API_KEY": {
+      "description": "Google Gemini API Key for AI vision",
+      "required": true
+    },
+    "MONGODBURI": {
+      "description": "MongoDB connection URI",
+      "required": true
+    },
+    "FLASK_DEBUG": {
+      "description": "Flask debug mode",
+      "value": "False"
+    },
+    "COORDINATOR_PORT": {
+      "description": "Coordinator agent port",
+      "value": "8000"
+    },
+    "DEFI_AGENT_PORT": {
+      "description": "DeFi agent port",
+      "value": "8001"
+    },
+    "FGI_AGENT_PORT": {
+      "description": "FGI agent port",
+      "value": "8003"
+    },
+    "COIN_AGENT_PORT": {
+      "description": "Coin agent port",
+      "value": "8004"
+    }
+  }
+}

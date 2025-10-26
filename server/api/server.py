@@ -18,7 +18,25 @@ env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 load_dotenv(env_path)
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000", "http://localhost:3001"])
+
+# CORS Configuration - Allow Vercel and local development
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://*.vercel.app",  # All Vercel preview deployments
+    "https://superio.vercel.app",  # Production Vercel (update with your domain)
+]
+
+# Check for custom frontend URL in environment
+custom_frontend = os.getenv("FRONTEND_URL")
+if custom_frontend:
+    ALLOWED_ORIGINS.append(custom_frontend)
+
+CORS(app,
+     origins=ALLOWED_ORIGINS,
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"]
+)
 
 # Store agent clients (will be initialized)
 agent_clients = {}
@@ -544,18 +562,28 @@ def update_chat_summary():
 
 @app.route('/api/chart/<path:filename>', methods=['GET'])
 def serve_chart(filename):
-    """Serve chart images from temp directory"""
+    """Serve chart images from demo_charts directory"""
     try:
+        # Try demo_charts directory first (for hackathon demo)
+        demo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'demo_charts', filename)
+        
+        if os.path.exists(demo_path):
+            from flask import send_file
+            return send_file(demo_path, mimetype='image/png')
+        
+        # Fallback to temp directory for dynamically generated charts
         import tempfile
         temp_dir = tempfile.gettempdir()
-        file_path = os.path.join(temp_dir, filename)
-
-        if os.path.exists(file_path):
+        temp_path = os.path.join(temp_dir, filename)
+        
+        if os.path.exists(temp_path):
             from flask import send_file
-            return send_file(file_path, mimetype='image/png')
-        else:
-            return jsonify({"error": "Chart image not found"}), 404
+            return send_file(temp_path, mimetype='image/png')
+        
+        # If neither exists, return 404
+        return jsonify({"error": f"Chart image not found: {filename}"}), 404
     except Exception as e:
+        print(f"❌ Error serving chart: {e}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -568,7 +596,8 @@ def get_timestamp():
 if __name__ == '__main__':
     import sys
 
-    port = int(os.getenv("FLASK_PORT", 5000))
+    # Heroku sets PORT env var, use that first, then FLASK_PORT, then default to 5001
+    port = int(os.getenv("PORT") or os.getenv("FLASK_PORT", 5001))
     debug = os.getenv("FLASK_DEBUG", "False").lower() == "true"
 
     print(f"Starting Flask API Server on port {port}...")

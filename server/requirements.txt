@@ -24,3 +24,6 @@ python-dateutil==2.9.0
 
 # Database
 pymongo==4.6.3
+
+# Process Management (for Render deployment)
+supervisor==4.2.5

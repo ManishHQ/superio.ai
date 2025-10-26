@@ -10,6 +10,17 @@ import tempfile
 import hashlib
 
 
+# Hardcoded demo images (for hackathon demo)
+DEMO_CHARTS = {
+    "ETH": os.path.join(os.path.dirname(__file__), "..", "demo_charts", "eth_chart.png"),
+    "BTC": os.path.join(os.path.dirname(__file__), "..", "demo_charts", "btc_chart.png"),
+    "SOL": os.path.join(os.path.dirname(__file__), "..", "demo_charts", "sol_chart.png"),
+}
+
+# Flag to enable demo mode (use local images)
+DEMO_MODE = os.getenv("CHART_DEMO_MODE", "false").lower() == "true"
+
+
 class ChartAnalyzer:
     """Chart analysis using Chart-IMG API and Gemini AI"""
     
@@ -20,13 +31,14 @@ class ChartAnalyzer:
         symbol: str,
         interval: str = "1D",
         style: str = "candle",
-        width: int = 640,
-        height: int = 480,
+        width: int = 800,
+        height: int = 600,
         indicator: Optional[str] = None,
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        use_demo: bool = False
     ) -> Optional[str]:
         """
-        Get TradingView chart image from Chart-IMG API
+        Get TradingView chart image from Chart-IMG API or local file
         
         Args:
             symbol: TradingView symbol (e.g., 'BINANCE:ETHUSDT', 'NASDAQ:AAPL')
@@ -36,11 +48,25 @@ class ChartAnalyzer:
             height: Image height
             indicator: Optional indicator to overlay (RSI, MACD, etc.)
             api_key: Chart-IMG API key
+            use_demo: Use demo/local images instead of API
         
         Returns:
             Local file path or None
         """
         try:
+            # Check if we should use demo images
+            if DEMO_MODE or use_demo:
+                # Extract base symbol from TradingView format (e.g., "BINANCE:ETHUSDT" -> "ETH")
+                base_symbol = symbol.split(":")[-1].replace("USDT", "").replace("USD", "")
+                
+                if base_symbol in DEMO_CHARTS:
+                    chart_path = DEMO_CHARTS[base_symbol]
+                    if os.path.exists(chart_path):
+                        print(f"🎯 Using demo chart: {chart_path}")
+                        return chart_path
+                    else:
+                        print(f"⚠️ Demo chart not found: {chart_path}")
+            
             if not api_key:
                 api_key = os.getenv("CHART_IMG_API_KEY")
             
@@ -187,7 +213,8 @@ Be confident and specific in your analysis. Use technical trading terms and prov
     def get_full_chart_analysis(
         symbol: str,
         interval: str = "1D",
-        api_key: Optional[str] = None
+        api_key: Optional[str] = None,
+        use_demo: bool = False
     ) -> Dict[str, Any]:
         """
         Get complete chart analysis with image and AI insights
@@ -208,7 +235,8 @@ Be confident and specific in your analysis. Use technical trading terms and prov
             chart_path = ChartAnalyzer.get_chart_image(
                 symbol=symbol,
                 interval=interval,
-                api_key=api_key
+                api_key=api_key,
+                use_demo=use_demo or DEMO_MODE
             )
             
             if not chart_path:

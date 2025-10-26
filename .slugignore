@@ -1,0 +1,56 @@
+# Heroku Slug Ignore - Reduce deployment size for backend-only deployment
+
+# Development files
+*.md
+!README.md
+!HEROKU_DEPLOYMENT.md
+.git
+.gitignore
+.DS_Store
+.claude/
+
+# Frontend files (exclude for backend-only deployment)
+/node_modules/
+/.next/
+/app/
+/components/
+/public/
+/lib/
+/utils/
+/contracts/
+/docs/
+/examples/
+next.config.ts
+next-env.d.ts
+postcss.config.mjs
+tsconfig.json
+tsconfig.tsbuildinfo
+package.json
+package-lock.json
+yarn.lock
+bun.lock
+Procfile.frontend
+
+# Python development
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env.local
+.env.example

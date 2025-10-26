@@ -40,7 +40,7 @@ Your capabilities:
 - **send_token**: Prepare send/transfer transactions for wallet signing (ALWAYS use this for send requests)
 - **swap_token**: Prepare token swap transactions for wallet signing (ALWAYS use this for swap requests)
 - **analyze_chart**: Analyze cryptocurrency or stock charts (DEFAULT: BINANCE, 1D timeframe - use these if not specified)
-- **lookup_transaction**: Look up and explain blockchain transactions on Ethereum Sepolia when user provides a transaction hash (ALWAYS use this for transaction hash lookups)
+- **lookup_transaction**: Look up and explain blockchain transactions on Ethereum Sepolia when user provides a transaction hash (ALWAYS use this for transaction hash lookups). After showing the detailed data, provide helpful context about what the transaction does, gas efficiency, token transfers, and any other notable details
 - **analyze_address**: Get comprehensive on-chain analytics for an address (balance, transaction count, activity metrics)
 - **get_address_tokens**: Get ERC-20 token holdings for an address
 - **get_address_transactions**: Get transaction history for an address
@@ -316,30 +316,117 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                         print(f"⚠️ Could not parse summary: {e}")
                         readable_summary = "Transaction summary unavailable"
                     
-                    # Build response
+                    # Build comprehensive response
                     response_text = f"📋 **Transaction Analysis**\n\n"
-                    
+
                     if readable_summary:
                         response_text += f"**Summary:** {readable_summary}\n\n"
-                    
+
                     if tx_info:
                         response_text += f"**Transaction Hash:** `{transaction_hash}`\n\n"
-                        
+
+                        # Status and confirmations
+                        if "status" in tx_info:
+                            status = tx_info["status"]
+                            status_emoji = "✅" if status == "ok" else "❌"
+                            response_text += f"**Status:** {status_emoji} {status.upper()}\n"
+
+                        if "confirmations" in tx_info:
+                            confirmations = tx_info["confirmations"]
+                            response_text += f"**Confirmations:** {confirmations:,}\n"
+
+                        if "block_number" in tx_info:
+                            response_text += f"**Block:** #{tx_info['block_number']:,}\n"
+
+                        response_text += "\n"
+
+                        # Transaction details
                         if "from" in tx_info:
-                            response_text += f"**From:** `{tx_info['from']}`\n"
+                            from_addr = tx_info['from']
+                            from_hash = from_addr.get('hash', from_addr) if isinstance(from_addr, dict) else from_addr
+                            response_text += f"**From:** `{from_hash}`\n"
+
                         if "to" in tx_info:
-                            response_text += f"**To:** `{tx_info['to']}`\n"
+                            to_addr = tx_info['to']
+                            to_hash = to_addr.get('hash', to_addr) if isinstance(to_addr, dict) else to_addr
+                            is_contract = to_addr.get('is_contract', False) if isinstance(to_addr, dict) else False
+                            contract_indicator = " 📝 (Contract)" if is_contract else ""
+                            response_text += f"**To:** `{to_hash}`{contract_indicator}\n"
+
                         if "value" in tx_info:
                             # Convert wei to ETH
                             value_wei = int(tx_info['value']) if tx_info['value'] else 0
                             value_eth = value_wei / 1e18
-                            response_text += f"**Value:** {value_eth} ETH\n"
+                            response_text += f"**Value:** {value_eth:.6f} ETH\n"
+
+                        response_text += "\n"
+
+                        # Gas and fees
+                        if "gas_limit" in tx_info:
+                            response_text += f"**Gas Limit:** {int(tx_info['gas_limit']):,}\n"
+
+                        if "gas_used" in tx_info:
+                            gas_used = int(tx_info.get('gas_used', 0))
+                            gas_limit = int(tx_info.get('gas_limit', gas_used))
+                            gas_percent = (gas_used / gas_limit * 100) if gas_limit > 0 else 0
+                            response_text += f"**Gas Used:** {gas_used:,} ({gas_percent:.1f}% of limit)\n"
+
+                        if "gas_price" in tx_info:
+                            gas_price = int(tx_info.get('gas_price', 0))
+                            gas_price_gwei = gas_price / 1e9
+                            response_text += f"**Gas Price:** {gas_price_gwei:.2f} Gwei\n"
+
                         if "gas_used" in tx_info and "gas_price" in tx_info:
                             gas_used = int(tx_info.get('gas_used', 0))
                             gas_price = int(tx_info.get('gas_price', 0))
-                            gas_cost = (gas_used * gas_price) / 1e18
-                            response_text += f"**Gas Used:** {gas_used:,}\n"
-                            response_text += f"**Gas Cost:** {gas_cost} ETH\n"
+                            gas_cost_eth = (gas_used * gas_price) / 1e18
+                            response_text += f"**Total Gas Cost:** {gas_cost_eth:.6f} ETH\n"
+
+                        # Priority fee (if available)
+                        if "max_priority_fee_per_gas" in tx_info or "priority_fee" in tx_info:
+                            priority_fee = tx_info.get('max_priority_fee_per_gas') or tx_info.get('priority_fee', 0)
+                            if priority_fee:
+                                priority_fee_gwei = int(priority_fee) / 1e9
+                                response_text += f"**Priority Fee:** {priority_fee_gwei:.2f} Gwei\n"
+
+                        response_text += "\n"
+
+                        # Transaction type and method
+                        if "type" in tx_info:
+                            tx_type = tx_info["type"]
+                            response_text += f"**Type:** {tx_type}\n"
+
+                        if "method" in tx_info and tx_info["method"]:
+                            method = tx_info["method"]
+                            response_text += f"**Method:** `{method}`\n"
+
+                        # Nonce
+                        if "nonce" in tx_info:
+                            response_text += f"**Nonce:** {tx_info['nonce']}\n"
+
+                        # Position in block
+                        if "position" in tx_info:
+                            response_text += f"**Position in Block:** {tx_info['position']}\n"
+
+                        # Timestamp
+                        if "timestamp" in tx_info:
+                            timestamp = tx_info["timestamp"]
+                            response_text += f"**Timestamp:** {timestamp}\n"
+
+                        # Token transfers (if available)
+                        if "token_transfers" in tx_info and tx_info["token_transfers"]:
+                            response_text += f"\n**Token Transfers:** {len(tx_info['token_transfers'])} transfer(s)\n"
+                            for i, transfer in enumerate(tx_info["token_transfers"][:3], 1):  # Show first 3
+                                token_name = transfer.get('token', {}).get('name', 'Unknown')
+                                token_symbol = transfer.get('token', {}).get('symbol', '???')
+                                amount = transfer.get('total', {}).get('value', '0')
+                                response_text += f"  {i}. {amount} {token_symbol} ({token_name})\n"
+                            if len(tx_info["token_transfers"]) > 3:
+                                response_text += f"  ... and {len(tx_info['token_transfers']) - 3} more\n"
+
+                        # Revert reason (if failed)
+                        if tx_info.get("status") != "ok" and "revert_reason" in tx_info:
+                            response_text += f"\n⚠️ **Revert Reason:** {tx_info['revert_reason']}\n"
                     
                     tools_used[0]["source"] = "Blockscout MCP API"
                     tools_used[0]["chain_id"] = chain_id
@@ -373,11 +460,47 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                         "tools_used": tools_used
                     }
                 
-                chain_id = "11155111"  # Ethereum Sepolia
+                # Try multiple networks - check Sepolia first, then mainnet
+                chains_to_try = [
+                    {"id": "11155111", "name": "Ethereum Sepolia"},
+                    {"id": "1", "name": "Ethereum Mainnet"}
+                ]
                 
-                print(f"🔍 Analyzing address {address} on Sepolia...")
+                chain_id = None
+                chain_name = None
+                address_info = None
+                
+                for chain in chains_to_try:
+                    blockscout_agent = BlockscoutAgent()
+                    test_info = blockscout_agent.get_address_info(chain["id"], address)
+                    
+                    # Check if we got valid data
+                    if test_info and 'data' in test_info and 'basic_info' in test_info['data']:
+                        basic_info = test_info['data']['basic_info']
+                        balance = basic_info.get('coin_balance', 0)
+                        
+                        # If there's balance or activity, use this chain
+                        if balance and int(balance) > 0:
+                            chain_id = chain["id"]
+                            chain_name = chain["name"]
+                            address_info = test_info
+                            del blockscout_agent
+                            break
+                    
+                    del blockscout_agent
+                
+                # Fallback to Sepolia if no data found
+                if chain_id is None:
+                    chain_id = "11155111"
+                    chain_name = "Ethereum Sepolia"
+                
+                print(f"🔍 Analyzing address {address} on {chain_name}...")
                 
                 blockscout_agent = BlockscoutAgent()
+                
+                # Get address info if we didn't already fetch it
+                if address_info is None:
+                    address_info = blockscout_agent.get_address_info(chain_id, address)
                 
                 try:
                     # Get comprehensive address info
@@ -388,7 +511,8 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                     
                     # Build comprehensive response
                     response_text = f"## 📊 **Address Analytics**\n\n"
-                    response_text += f"**Address:** `{address}`\n\n"
+                    response_text += f"**Address:** `{address}`\n"
+                    response_text += f"**Network:** {chain_name}\n\n"
                     
                     # Basic info - extract from nested structure
                     if address_info and 'data' in address_info and 'basic_info' in address_info['data']:

@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { Sidebar } from '@/components/sidebar';
 
@@ -10,15 +8,7 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const { isConnected, isConnecting } = useAccount();
-
-  useEffect(() => {
-    // Redirect to home if wallet is not connected
-    if (!isConnecting && !isConnected) {
-      router.push('/');
-    }
-  }, [isConnected, isConnecting, router]);
 
   // Show loading state while checking connection
   if (isConnecting) {
@@ -32,9 +22,17 @@ export default function AppLayout({
     );
   }
 
-  // Don't render anything if not connected (will redirect)
+  // If not connected, allow the page to render (the chat interface will handle wallet connection)
   if (!isConnected) {
-    return null;
+    // Simply render without redirecting - let the chat interface handle the connection requirement
+    return (
+      <div className="flex h-screen bg-background overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 overflow-auto">
+          {children}
+        </main>
+      </div>
+    );
   }
 
   return (

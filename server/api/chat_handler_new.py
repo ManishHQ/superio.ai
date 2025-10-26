@@ -383,8 +383,8 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                     # Get comprehensive address info
                     address_info = blockscout_agent.get_address_info(chain_id, address)
                     tokens = blockscout_agent.get_tokens_by_address(chain_id, address)
-                    transactions = blockscout_agent.get_transactions_by_address(chain_id, address, limit=5)
-                    token_transfers = blockscout_agent.get_token_transfers_by_address(chain_id, address, limit=10)
+                    transactions = blockscout_agent.get_transactions_by_address(chain_id, address, limit=20)  # Get more for metrics
+                    token_transfers = blockscout_agent.get_token_transfers_by_address(chain_id, address, limit=20)
                     
                     # Build comprehensive response
                     response_text = f"## 📊 **Address Analytics**\n\n"
@@ -400,9 +400,82 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                         has_token_transfers = basic_info.get('has_token_transfers', False)
                         has_logs = basic_info.get('has_logs', False)
                         
+                        # Calculate transaction counts
+                        tx_count = len(transactions) if transactions else 0
+                        token_tx_count = len(token_transfers) if token_transfers else 0
+                        total_interactions = tx_count + token_tx_count
+                        
                         response_text += "### 💰 **Balance**\n"
                         response_text += f"- Native Balance: **{balance_eth:.6f} ETH**\n"
                         response_text += f"- Address Type: {is_contract and '🤖 Smart Contract' or '👤 Wallet'}\n\n"
+                        
+                        # On-chain metrics and reputation score
+                        response_text += "### 📊 **On-Chain Metrics**\n"
+                        response_text += f"- Total Transactions: **{tx_count}**\n"
+                        if token_tx_count > 0:
+                            response_text += f"- Token Transfers: **{token_tx_count}**\n"
+                        response_text += f"- Total Interactions: **{total_interactions}**\n"
+                        response_text += f"- Unique Tokens Held: **{len(tokens) if tokens else 0}**\n\n"
+                        
+                        # Calculate reputation score
+                        reputation_score = 0
+                        reputation_factors = []
+                        
+                        if balance_eth > 0:
+                            reputation_score += 10
+                            reputation_factors.append("💰 Has ETH balance")
+                        if tx_count > 10:
+                            reputation_score += 20
+                            reputation_factors.append("🔹 Active trader (10+ txs)")
+                        elif tx_count > 0:
+                            reputation_score += 10
+                            reputation_factors.append("🔸 Some transaction history")
+                        if token_tx_count > 20:
+                            reputation_score += 20
+                            reputation_factors.append("🪙 Token power user")
+                        elif token_tx_count > 0:
+                            reputation_score += 10
+                            reputation_factors.append("🔸 Token activity")
+                        if len(tokens) > 10:
+                            reputation_score += 15
+                            reputation_factors.append("💎 Diverse token portfolio")
+                        elif len(tokens) > 0:
+                            reputation_score += 10
+                            reputation_factors.append("🪙 Token holder")
+                        if has_logs:
+                            reputation_score += 10
+                            reputation_factors.append("📡 DeFi user")
+                        
+                        # Cap score at 100
+                        reputation_score = min(reputation_score, 100)
+                        
+                        # Determine reputation tier
+                        if reputation_score >= 80:
+                            tier = "🏆 Elite"
+                            tier_desc = "Highly active and established on-chain"
+                        elif reputation_score >= 60:
+                            tier = "🌟 Veteran"
+                            tier_desc = "Experienced on-chain participant"
+                        elif reputation_score >= 40:
+                            tier = "⭐ Active"
+                            tier_desc = "Regular on-chain activity"
+                        elif reputation_score >= 20:
+                            tier = "📈 Emerging"
+                            tier_desc = "Building on-chain presence"
+                        else:
+                            tier = "🆕 New"
+                            tier_desc = "New or inactive address"
+                        
+                        response_text += "### 🏅 **On-Chain Reputation**\n"
+                        response_text += f"- **Tier:** {tier} ({tier_desc})\n"
+                        response_text += f"- **Score:** {reputation_score}/100\n"
+                        
+                        if reputation_factors:
+                            response_text += f"- **Contributing Factors:**\n"
+                            for factor in reputation_factors[:5]:  # Show top 5
+                                response_text += f"  • {factor}\n"
+                        
+                        response_text += "\n"
                         
                         # Activity indicators
                         response_text += "### 🎯 **Activity Indicators**\n"

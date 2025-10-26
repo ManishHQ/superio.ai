@@ -460,27 +460,31 @@ class BlockscoutAgent:
 
 # Test the agent
 if __name__ == "__main__":
-    print("🧪 Testing Blockscout MCP Agent...")
+    print("🧪 Testing Blockscout MCP Agent on Ethereum Sepolia...")
     
     agent = BlockscoutAgent()
     
-    # Test: Get address info for a known address
+    # Ethereum Sepolia chain ID
+    CHAIN_ID = "11155111"
+    
+    # Test: Get address info for a known Sepolia address
     print("\n1️⃣ Testing get_address_info...")
     address_info = agent.get_address_info(
-        chain_id="1",
-        address="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"  # vitalik.eth
+        chain_id=CHAIN_ID,
+        address="0x1234567890123456789012345678901234567890"  # Replace with actual Sepolia address
     )
     if address_info:
         print(f"✅ Got address info with {len(str(address_info))} characters")
     else:
         print("❌ Failed to get address info")
     
-    # Test: Get tokens by address
-    print("\n2️⃣ Testing get_tokens_by_address...")
-    tokens = agent.get_tokens_by_address(
-        chain_id="1",
-        address="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    # Test: Get transactions by address
+    print("\n2️⃣ Testing get_transactions_by_address...")
+    transactions = agent.get_transactions_by_address(
+        chain_id=CHAIN_ID,
+        address="0x1234567890123456789012345678901234567890",
+        limit=5
     )
-    print(f"Found {len(tokens) if isinstance(tokens, list) else 0} tokens")
+    print(f"Found {len(transactions) if isinstance(transactions, list) else 0} transactions")
     
     print("\n✅ Tests complete!")

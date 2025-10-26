@@ -4,7 +4,6 @@ import {getDefaultConfig, RainbowKitProvider, darkTheme} from "@rainbow-me/rainb
 import {WagmiProvider} from "wagmi";
 import {mainnet, polygon, optimism, arbitrum, base, sepolia} from "wagmi/chains";
 import {QueryClientProvider, QueryClient} from "@tanstack/react-query";
-import NexusProvider from "@/components/providers/NexusProvider";
 
 const config = getDefaultConfig({
     appName: "Next.js PWA App",
@@ -27,9 +26,7 @@ export function Providers({children}: {children: React.ReactNode}) {
     return (
         <WagmiProvider config={config}>
             <QueryClientProvider client={queryClient}>
-                <RainbowKitProvider theme={matrixTheme}>
-                    <NexusProvider>{children}</NexusProvider>
-                </RainbowKitProvider>
+                <RainbowKitProvider theme={matrixTheme}>{children}</RainbowKitProvider>
             </QueryClientProvider>
         </WagmiProvider>
     );

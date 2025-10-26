@@ -383,10 +383,12 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                     # Get comprehensive address info
                     address_info = blockscout_agent.get_address_info(chain_id, address)
                     tokens = blockscout_agent.get_tokens_by_address(chain_id, address)
-                    transactions = blockscout_agent.get_transactions_by_address(chain_id, address, limit=10)
+                    transactions = blockscout_agent.get_transactions_by_address(chain_id, address, limit=5)
+                    token_transfers = blockscout_agent.get_token_transfers_by_address(chain_id, address, limit=10)
                     
-                    # Build response
-                    response_text = f"📊 **Address Analytics: {address}**\n\n"
+                    # Build comprehensive response
+                    response_text = f"## 📊 **Address Analytics**\n\n"
+                    response_text += f"**Address:** `{address}`\n\n"
                     
                     # Basic info - extract from nested structure
                     if address_info and 'data' in address_info and 'basic_info' in address_info['data']:
@@ -396,32 +398,73 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                         has_tokens = basic_info.get('has_tokens', False)
                         is_contract = basic_info.get('is_contract', False)
                         has_token_transfers = basic_info.get('has_token_transfers', False)
+                        has_logs = basic_info.get('has_logs', False)
                         
-                        response_text += f"**Balance:** {balance_eth:.6f} ETH\n"
-                        response_text += f"**Type:** {'Contract' if is_contract else 'Wallet'}\n"
+                        response_text += "### 💰 **Balance**\n"
+                        response_text += f"- Native Balance: **{balance_eth:.6f} ETH**\n"
+                        response_text += f"- Address Type: {is_contract and '🤖 Smart Contract' or '👤 Wallet'}\n\n"
+                        
+                        # Activity indicators
+                        response_text += "### 🎯 **Activity Indicators**\n"
+                        activity_items = []
                         if has_tokens:
-                            response_text += f"**Has Tokens:** Yes\n"
+                            activity_items.append("✅ Holds ERC-20 Tokens")
                         if has_token_transfers:
-                            response_text += f"**Has Token Transfers:** Yes\n"
+                            activity_items.append("✅ Token Transfer Activity")
+                        if has_logs:
+                            activity_items.append("✅ Smart Contract Interactions")
+                        if not activity_items:
+                            activity_items.append("ℹ️ No recent activity detected")
+                        
+                        for item in activity_items:
+                            response_text += f"- {item}\n"
                         response_text += "\n"
                     
-                    # Token holdings
+                    # Token holdings with proper formatting
                     if tokens and len(tokens) > 0:
-                        response_text += f"**Token Holdings ({len(tokens)}):**\n"
-                        for token in tokens[:5]:  # Show top 5
+                        response_text += f"### 🪙 **Token Holdings** ({len(tokens)} tokens)\n\n"
+                        for i, token in enumerate(tokens[:10], 1):  # Show top 10
                             symbol = token.get('symbol', 'N/A')
+                            name = token.get('name', 'Unknown Token')
                             balance = token.get('balance', 0)
                             decimals = token.get('decimals', 18)
                             value = int(balance) / (10 ** decimals) if balance else 0
-                            response_text += f"  • {symbol}: {value:,.4f}\n"
-                        response_text += "\n"
+                            
+                            # Format large numbers
+                            if value >= 1000000:
+                                value_str = f"{value:,.2f}"
+                            elif value >= 1:
+                                value_str = f"{value:,.4f}"
+                            else:
+                                value_str = f"{value:.6f}"
+                            
+                            response_text += f"{i}. **{symbol}** ({name})\n"
+                            response_text += f"   Balance: `{value_str}`\n\n"
+                    else:
+                        response_text += "### 🪙 **Token Holdings**\n"
+                        response_text += "- No ERC-20 tokens detected\n\n"
                     
-                    # Recent transactions summary
+                    # Recent transaction activity
                     if transactions and len(transactions) > 0:
-                        response_text += f"**Recent Activity ({len(transactions)} transactions):**\n"
-                        for tx in transactions[:3]:  # Show last 3
-                            tx_hash = tx.get('hash', '')[:10] + "..."
-                            response_text += f"  • {tx_hash}\n"
+                        response_text += f"### 📜 **Recent Transaction History** ({len(transactions)} shown)\n\n"
+                        for i, tx in enumerate(transactions[:5], 1):
+                            tx_hash = tx.get('hash', '')
+                            block_number = tx.get('block_number', 'N/A')
+                            timestamp = tx.get('timestamp', '')
+                            
+                            # Try to get value
+                            value_wei = tx.get('value', 0)
+                            value_eth = int(value_wei) / 1e18 if value_wei else 0
+                            
+                            response_text += f"{i}. **Transaction** `{tx_hash[:16]}...`\n"
+                            if block_number != 'N/A':
+                                response_text += f"   Block: {block_number}\n"
+                            if value_eth > 0:
+                                response_text += f"   Value: {value_eth:.6f} ETH\n"
+                            response_text += "\n"
+                    else:
+                        response_text += "### 📜 **Transaction History**\n"
+                        response_text += "- No recent transactions found\n\n"
                     
                     tools_used[0]["source"] = "Blockscout MCP API"
                     tools_used[0]["chain_id"] = chain_id

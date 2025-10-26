@@ -225,7 +225,9 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                 if chart_result.get("chart_url") and not chart_result.get("error"):
                     import os
                     filename = os.path.basename(chart_result["chart_url"])
-                    chart_url = f"http://localhost:5001/api/chart/{filename}"
+                    # Use environment variable for API URL, fallback to localhost
+                    api_url = os.getenv("API_URL", "http://localhost:5001")
+                    chart_url = f"{api_url}/api/chart/{filename}"
                     print(f"📸 Converted chart path to URL: {chart_url}")
 
                 # Update tools_used

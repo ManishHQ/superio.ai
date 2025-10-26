@@ -230,9 +230,9 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                     chart_url = f"{api_url}/api/chart/{filename}"
                     print(f"📸 Converted chart path to URL: {chart_url}")
 
-                # Update tools_used
+                # Update tools_used with correct chart URL
                 tools_used[0]["source"] = "Chart-IMG API & AI Vision Analysis"
-                tools_used[0]["chart_url"] = chart_url
+                tools_used[0]["chart_url"] = chart_url  # Use the converted URL
                 tools_used[0]["recommendation"] = chart_result.get("recommendation")
                 
                 # Build response with chart (remove link, chart will be embedded via chart_url field)
@@ -255,7 +255,7 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                 return {
                     "response": response,
                     "tools_used": tools_used,
-                    "chart_url": chart_result.get("chart_url"),
+                    "chart_url": chart_url,  # Use the converted URL, not the original path
                     "chart_analysis": chart_result.get("analysis")
                 }
             

@@ -33,8 +33,6 @@ contract DeployVault is Script {
         console.log("\n--- Deploying Mock Token ---");
         mockToken = new ERC20Mock();
         console.log("Mock Token deployed at:", address(mockToken));
-        console.log("Mock Token Name:", MOCK_TOKEN_NAME);
-        console.log("Mock Token Symbol:", MOCK_TOKEN_SYMBOL);
 
         // Step 2: Deploy Vault
         console.log("\n--- Deploying Vault ---");

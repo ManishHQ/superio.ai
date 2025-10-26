@@ -46,7 +46,9 @@ export default function RootLayout({
         <html lang="en" className="matrix">
             <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
                 <MatrixRainWrapper />
-                <Providers>{children}</Providers>
+                <Providers>
+                    {children}
+                    </Providers>
                 <PWAInstall />
             </body>
         </html>

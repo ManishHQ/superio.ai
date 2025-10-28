@@ -435,51 +435,55 @@ IMPORTANT:
                         if tx_info.get("status") != "ok" and "revert_reason" in tx_info:
                             response_text += f"\n⚠️ **Revert Reason:** {tx_info['revert_reason']}\n"
 
-                    # Add contextual analysis
+                    # Add contextual analysis based on ACTUAL transaction data
                     response_text += "\n---\n\n**💡 Analysis:**\n"
 
-                    # Gas efficiency analysis
-                    if "gas_used" in tx_info and "gas_limit" in tx_info:
-                        gas_used = int(tx_info.get('gas_used', 0))
-                        gas_limit = int(tx_info.get('gas_limit', 0))
-                        gas_percent = (gas_used / gas_limit * 100) if gas_limit > 0 else 0
-
-                        if gas_percent < 50:
-                            response_text += "- **Gas Efficiency:** Excellent - transaction used less than 50% of the gas limit, indicating efficient execution.\n"
-                        elif gas_percent < 80:
-                            response_text += "- **Gas Efficiency:** Good - transaction used a reasonable amount of gas.\n"
-                        elif gas_percent < 95:
-                            response_text += "- **Gas Efficiency:** Moderate - transaction used most of the allocated gas.\n"
-                        else:
-                            response_text += "- **Gas Efficiency:** Low - transaction nearly exhausted the gas limit, which could indicate complex operations.\n"
-
-                    # Transaction type insights
-                    if tx_info.get("to", {}).get("is_contract") if isinstance(tx_info.get("to"), dict) else False:
-                        response_text += "- **Type:** Smart contract interaction - this transaction executed code on a deployed contract.\n"
-                        if tx_info.get("method"):
-                            response_text += f"  - Called method: `{tx_info['method']}`\n"
-                    else:
-                        value_wei = int(tx_info.get('value', 0))
-                        if value_wei > 0:
-                            response_text += "- **Type:** Direct ETH transfer - simple value transfer between addresses.\n"
-                        else:
-                            response_text += "- **Type:** Zero-value transaction - possibly a contract call or data storage operation.\n"
-
-                    # Token transfer insights
-                    if "token_transfers" in tx_info and tx_info["token_transfers"]:
-                        num_transfers = len(tx_info["token_transfers"])
-                        if num_transfers == 1:
-                            response_text += "- **Token Activity:** Single token transfer detected.\n"
-                        else:
-                            response_text += f"- **Token Activity:** Multiple token transfers ({num_transfers}) - possibly a swap or complex DeFi interaction.\n"
-
-                    # Status insights
-                    if tx_info.get("status") == "ok":
+                    # Check actual status from the data we got
+                    actual_status = tx_info.get("status", "unknown")
+                    actual_result = tx_info.get("result", "unknown")
+                    
+                    # Status insights based on real data
+                    if actual_status == "ok" or actual_result == "success":
                         confirmations = tx_info.get("confirmations", 0)
                         if confirmations > 12:
-                            response_text += "- **Security:** Transaction is well-confirmed and considered final.\n"
+                            response_text += "- **Security:** ✅ Transaction is well-confirmed and considered final.\n"
                         elif confirmations > 0:
-                            response_text += f"- **Security:** Transaction has {confirmations} confirmations - generally safe but awaiting more confirmations for finality.\n"
+                            response_text += f"- **Security:** ✅ Transaction has {confirmations} confirmations - generally safe.\n"
+                        
+                        # Gas efficiency analysis
+                        if "gas_used" in tx_info and "gas_limit" in tx_info:
+                            gas_used = int(tx_info.get('gas_used', 0))
+                            gas_limit = int(tx_info.get('gas_limit', 0))
+                            gas_percent = (gas_used / gas_limit * 100) if gas_limit > 0 else 0
+
+                            if gas_percent < 50:
+                                response_text += "- **Gas Efficiency:** Excellent - transaction used less than 50% of the gas limit.\n"
+                            elif gas_percent < 80:
+                                response_text += "- **Gas Efficiency:** Good - transaction used a reasonable amount of gas.\n"
+                            elif gas_percent < 95:
+                                response_text += "- **Gas Efficiency:** Moderate - transaction used most of the allocated gas.\n"
+                            else:
+                                response_text += "- **Gas Efficiency:** Low - transaction nearly exhausted the gas limit.\n"
+
+                        # Transaction type insights
+                        if tx_info.get("to", {}).get("is_contract") if isinstance(tx_info.get("to"), dict) else False:
+                            response_text += "- **Type:** Smart contract interaction - this transaction executed code on a deployed contract.\n"
+                            if tx_info.get("method"):
+                                response_text += f"  - Called method: `{tx_info['method']}`\n"
+                        else:
+                            value_wei = int(tx_info.get('value', 0))
+                            if value_wei > 0:
+                                response_text += "- **Type:** Direct ETH transfer - simple value transfer between addresses.\n"
+                            else:
+                                response_text += "- **Type:** Contract call or data storage operation.\n"
+
+                        # Token transfer insights
+                        if "token_transfers" in tx_info and tx_info["token_transfers"]:
+                            num_transfers = len(tx_info["token_transfers"])
+                            if num_transfers == 1:
+                                response_text += "- **Token Activity:** Single token transfer detected.\n"
+                            else:
+                                response_text += f"- **Token Activity:** Multiple token transfers ({num_transfers}) - possibly a swap or complex DeFi interaction.\n"
                     else:
                         response_text += "- **Status:** ⚠️ Transaction failed - the operation was reverted. Check the revert reason above.\n"
 

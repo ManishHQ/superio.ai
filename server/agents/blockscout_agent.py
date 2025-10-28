@@ -241,7 +241,8 @@ class BlockscoutAgent:
                     max_pages = 10  # Safety limit to avoid infinite loops
                     current_page = 1
                     
-                    while "pagination" in content_data and "next_call" in content_data["pagination"] and current_page < max_pages:
+                    # Continue fetching pages while pagination exists
+                    while isinstance(content_data, dict) and "pagination" in content_data and "next_call" in content_data["pagination"] and current_page < max_pages:
                         print(f"📄 Page {current_page}: Fetched {len(all_transactions)} transactions, fetching more...")
                         next_call = content_data["pagination"]["next_call"]
                         
@@ -265,13 +266,19 @@ class BlockscoutAgent:
                                 if isinstance(data, list):
                                     page_transactions = data
                             
+                            # Add transactions from this page
                             if page_transactions:
                                 all_transactions.extend(page_transactions)
-                                print(f"📄 Page {current_page}: Got {len(page_transactions)} more transactions (total: {len(all_transactions)})")
-                                content_data = paginated_data  # Update for next iteration
+                                print(f"📄 Page {current_page}: Got {len(page_transactions)} transactions (total: {len(all_transactions)})")
+                            
+                            # Update content_data for next iteration check
+                            content_data = paginated_data
+                            
+                            # Check if there are more pages
+                            if isinstance(paginated_data, dict) and "pagination" in paginated_data and "next_call" in paginated_data["pagination"]:
                                 current_page += 1
                             else:
-                                print(f"📄 No more transactions on page {current_page}")
+                                print(f"📄 Reached last page (page {current_page})")
                                 break
                         else:
                             print(f"📄 No response from page {current_page}")

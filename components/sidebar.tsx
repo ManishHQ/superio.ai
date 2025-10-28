@@ -34,10 +34,10 @@ export function Sidebar() {
         const response = await fetch(
           API_ENDPOINTS.chatHistory(address)
         );
-        
+
         if (response.ok) {
           const data = await response.json();
-          
+
           if (data && data.messages && data.messages.length > 0) {
             // Create a conversation entry with summary
             const conversation: Conversation = {
@@ -45,7 +45,7 @@ export function Sidebar() {
               title: data.summary || 'Untitled conversation',
               timestamp: new Date(data.updated_at || data.created_at),
             };
-            
+
             setConversations([conversation]);
           } else {
             setConversations([]);

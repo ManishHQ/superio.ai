@@ -438,22 +438,25 @@ IMPORTANT:
                     # Add contextual analysis based on ACTUAL transaction data
                     response_text += "\n---\n\n**💡 Analysis:**\n"
 
+                    # Get data from nested structure
+                    tx_data = tx_info.get("data", {}) if isinstance(tx_info, dict) and "data" in tx_info else {}
+                    
                     # Check actual status from the data we got
-                    actual_status = tx_info.get("status", "unknown")
-                    actual_result = tx_info.get("result", "unknown")
+                    actual_status = tx_data.get("status", tx_info.get("status", "unknown"))
+                    actual_result = tx_data.get("result", tx_info.get("result", "unknown"))
                     
                     # Status insights based on real data
                     if actual_status == "ok" or actual_result == "success":
-                        confirmations = tx_info.get("confirmations", 0)
+                        confirmations = tx_data.get("confirmations", 0)
                         if confirmations > 12:
                             response_text += "- **Security:** ✅ Transaction is well-confirmed and considered final.\n"
                         elif confirmations > 0:
                             response_text += f"- **Security:** ✅ Transaction has {confirmations} confirmations - generally safe.\n"
                         
                         # Gas efficiency analysis
-                        if "gas_used" in tx_info and "gas_limit" in tx_info:
-                            gas_used = int(tx_info.get('gas_used', 0))
-                            gas_limit = int(tx_info.get('gas_limit', 0))
+                        if "gas_used" in tx_data and "gas_limit" in tx_data:
+                            gas_used = int(tx_data.get('gas_used', 0))
+                            gas_limit = int(tx_data.get('gas_limit', 0))
                             gas_percent = (gas_used / gas_limit * 100) if gas_limit > 0 else 0
 
                             if gas_percent < 50:
@@ -466,20 +469,21 @@ IMPORTANT:
                                 response_text += "- **Gas Efficiency:** Low - transaction nearly exhausted the gas limit.\n"
 
                         # Transaction type insights
-                        if tx_info.get("to", {}).get("is_contract") if isinstance(tx_info.get("to"), dict) else False:
+                        to_address = tx_data.get("to", {})
+                        if isinstance(to_address, dict) and to_address.get("is_contract"):
                             response_text += "- **Type:** Smart contract interaction - this transaction executed code on a deployed contract.\n"
-                            if tx_info.get("method"):
-                                response_text += f"  - Called method: `{tx_info['method']}`\n"
+                            if tx_data.get("method"):
+                                response_text += f"  - Called method: `{tx_data['method']}`\n"
                         else:
-                            value_wei = int(tx_info.get('value', 0))
+                            value_wei = int(tx_data.get('value', 0))
                             if value_wei > 0:
                                 response_text += "- **Type:** Direct ETH transfer - simple value transfer between addresses.\n"
                             else:
                                 response_text += "- **Type:** Contract call or data storage operation.\n"
 
                         # Token transfer insights
-                        if "token_transfers" in tx_info and tx_info["token_transfers"]:
-                            num_transfers = len(tx_info["token_transfers"])
+                        if "token_transfers" in tx_data and tx_data["token_transfers"]:
+                            num_transfers = len(tx_data["token_transfers"])
                             if num_transfers == 1:
                                 response_text += "- **Token Activity:** Single token transfer detected.\n"
                             else:
@@ -566,8 +570,10 @@ IMPORTANT:
                     address_info = blockscout_agent.get_address_info(chain_id, address)
                     tokens = blockscout_agent.get_tokens_by_address(chain_id, address)
                     # Request 50 transactions to get all available data
-                    transactions = blockscout_agent.get_transactions_by_address(chain_id, address, limit=50)  
+                    transactions = blockscout_agent.get_transactions_by_address(chain_id, address, limit=50)
+                    print(f"🔍 DEBUG: Got {len(transactions) if transactions else 0} transactions from Blockscout")
                     token_transfers = blockscout_agent.get_token_transfers_by_address(chain_id, address, limit=50)
+                    print(f"🔍 DEBUG: Got {len(token_transfers) if token_transfers else 0} token transfers from Blockscout")
                     
                     # Build comprehensive response
                     response_text = f"## 📊 **Address Analytics**\n\n"
@@ -588,6 +594,8 @@ IMPORTANT:
                         tx_count = len(transactions) if transactions else 0
                         token_tx_count = len(token_transfers) if token_transfers else 0
                         total_interactions = tx_count + token_tx_count
+                        print(f"🔍 DEBUG chat_handler: transactions type: {type(transactions)}, length: {len(transactions) if transactions else 'None'}")
+                        print(f"🔍 DEBUG chat_handler: tx_count: {tx_count}, token_tx_count: {token_tx_count}")
                         
                         response_text += "### 💰 **Balance**\n"
                         response_text += f"- Native Balance: **{balance_eth:.6f} ETH**\n"

@@ -223,19 +223,34 @@ class BlockscoutAgent:
                 content_text = result["content"][0]["text"]
                 content_data = json.loads(content_text)
                 
+                print(f"🔍 DEBUG blockscout_agent: content_data type: {type(content_data)}")
+                if isinstance(content_data, dict):
+                    print(f"🔍 DEBUG blockscout_agent: content_data keys: {content_data.keys()}")
+                    if "data" in content_data:
+                        print(f"🔍 DEBUG blockscout_agent: data type: {type(content_data['data'])}")
+                        if isinstance(content_data["data"], list):
+                            print(f"🔍 DEBUG blockscout_agent: data list length: {len(content_data['data'])}")
+                
                 print(f"📊 Retrieved {len(content_data) if isinstance(content_data, list) else 'unknown'} transactions from Blockscout")
                 
                 # Handle both direct array and nested data structure
                 if isinstance(content_data, list):
                     all_transactions = content_data
+                    print(f"🔍 DEBUG: Direct list of {len(all_transactions)} transactions")
                 elif isinstance(content_data, dict):
                     # Check for pagination info
                     if "data" in content_data:
                         data = content_data["data"]
                         if isinstance(data, list):
                             all_transactions = data
+                            print(f"🔍 DEBUG: Data list with {len(all_transactions)} transactions")
                         elif isinstance(data, dict) and "items" in data:
                             all_transactions = data["items"]
+                            print(f"🔍 DEBUG: Items list with {len(all_transactions)} transactions")
+                        else:
+                            print(f"🔍 DEBUG: data is not a list or items dict: {type(data)}")
+                    else:
+                        print(f"🔍 DEBUG: No 'data' key in content_data")
                     
                     # Handle pagination - fetch ALL pages until no more data
                     max_pages = 10  # Safety limit to avoid infinite loops
@@ -275,8 +290,13 @@ class BlockscoutAgent:
                             content_data = paginated_data
                             
                             # Check if there are more pages
-                            if isinstance(paginated_data, dict) and "pagination" in paginated_data and "next_call" in paginated_data["pagination"]:
-                                current_page += 1
+                            if isinstance(paginated_data, dict) and "pagination" in paginated_data:
+                                pagination = paginated_data["pagination"]
+                                if pagination and "next_call" in pagination and pagination["next_call"]:
+                                    current_page += 1
+                                else:
+                                    print(f"📄 Reached last page (page {current_page})")
+                                    break
                             else:
                                 print(f"📄 Reached last page (page {current_page})")
                                 break

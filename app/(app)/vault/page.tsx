@@ -42,21 +42,21 @@ export default function VaultPage() {
         }>
     >([
         {
-            txHash: "0x7a4f8b2c5d9e1f3a8c7b6e4d2f9a1c3e",
+            txHash: "0x1340116c5501ee91944825a1d2bd53cb0b8fa3c4564b0bba2d4aa7e67ac2773d",
             amount: "10",
-            timestamp: Date.now() - 7200000, // 2 hours ago
+            timestamp: Date.now() - 1320000, // 22 minutes ago
             status: "success",
         },
         {
-            txHash: "0x3c1e9f7a2b5d8e1f4a7c6b3e9d2f5a8c",
+            txHash: "0xc74dcc904429d409c7670ab86243673a3fc1e722356e6153e85e48b5a204e035",
             amount: "25",
-            timestamp: Date.now() - 86400000, // 1 day ago
+            timestamp: Date.now() - 3600000, // 1 hour ago
             status: "success",
         },
         {
-            txHash: "0x5d2b4e8f1a9c7e3f2d6b8a4c5e9f1d3b",
+            txHash: "0xa91b5307fa249b4ccb1bc8402e5cee0bc529969bbea177bc9135d0d94dea2ff2",
             amount: "50",
-            timestamp: Date.now() - 432000000, // 5 days ago
+            timestamp: Date.now() - 172800000, // 2 days ago
             status: "success",
         },
     ]);

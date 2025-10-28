@@ -51,7 +51,11 @@ Your capabilities:
 - **explain_transaction**: Explain how blockchain transactions work in general
 - **General conversation**: Answer questions naturally
 
-IMPORTANT: For transaction requests (send/swap), you prepare the transaction - users sign it with their wallet. Always call the function! When users provide a transaction hash (0x...), ALWAYS use lookup_transaction to look it up! When users ask about an address or want on-chain analytics, use analyze_address!"""
+IMPORTANT: 
+- For transaction requests (send/swap), you prepare the transaction - users sign it with their wallet. Always call the function! 
+- When users provide a 66-character transaction hash (0x followed by 64 hex characters), ALWAYS use lookup_transaction to look it up!
+- When users provide a 42-character Ethereum address (0x followed by 40 hex characters) or ask to "analyze/analyse" an address, ALWAYS use analyze_address!
+- The key difference: Address = 42 chars (0x + 40), Transaction Hash = 66 chars (0x + 64)."""
 
     # Combine all available tools
     all_tools = ACTION_TOOLS + YIELD_TOOLS
@@ -271,7 +275,6 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                 
                 # Use Ethereum Sepolia testnet
                 chain_id = "11155111"  # Ethereum Sepolia
-                
                 print(f"🔍 Looking up transaction {transaction_hash} on Sepolia...")
                 
                 # Initialize Blockscout agent
@@ -558,8 +561,9 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                     # Get comprehensive address info
                     address_info = blockscout_agent.get_address_info(chain_id, address)
                     tokens = blockscout_agent.get_tokens_by_address(chain_id, address)
-                    transactions = blockscout_agent.get_transactions_by_address(chain_id, address, limit=20)  # Get more for metrics
-                    token_transfers = blockscout_agent.get_token_transfers_by_address(chain_id, address, limit=20)
+                    # Request 50 transactions to get all available data
+                    transactions = blockscout_agent.get_transactions_by_address(chain_id, address, limit=50)  
+                    token_transfers = blockscout_agent.get_token_transfers_by_address(chain_id, address, limit=50)
                     
                     # Build comprehensive response
                     response_text = f"## 📊 **Address Analytics**\n\n"
@@ -747,7 +751,7 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                         "tools_used": tools_used
                     }
                 
-                chain_id = "11155111"
+                chain_id = "11155111"  # Ethereum Sepolia
                 blockscout_agent = BlockscoutAgent()
                 
                 try:
@@ -755,7 +759,7 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                     
                     if not tokens or len(tokens) == 0:
                         return {
-                            "response": f"No ERC-20 tokens found for address {address} on Sepolia.",
+                            "response": f"No ERC-20 tokens found for address {address} on Ethereum Mainnet.",
                             "tools_used": tools_used
                         }
                     
@@ -797,7 +801,7 @@ IMPORTANT: For transaction requests (send/swap), you prepare the transaction - u
                         "tools_used": tools_used
                     }
                 
-                chain_id = "11155111"
+                chain_id = "11155111"  # Ethereum Sepolia
                 blockscout_agent = BlockscoutAgent()
                 
                 try:

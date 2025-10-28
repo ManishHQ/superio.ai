@@ -18,6 +18,7 @@ class BlockscoutAgent:
     def __init__(self):
         """Initialize the Blockscout MCP agent"""
         self.base_url = self.MCP_URL
+        print(f"🔗 Blockscout MCP URL: {self.MCP_URL}")
         self.client = httpx.Client(timeout=60.0)
     
     def _call_mcp(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -32,6 +33,7 @@ class BlockscoutAgent:
             Response from the MCP server
         """
         try:
+            print(f"📡 Calling Blockscout MCP: {method} with params: {params}")
             payload = {
                 "jsonrpc": "2.0",
                 "method": "tools/call",
@@ -44,7 +46,8 @@ class BlockscoutAgent:
             
             headers = {
                 "Content-Type": "application/json",
-                "Accept": "application/json, text/event-stream"
+                "Accept": "application/json, text/event-stream",
+                "Accept-Encoding": "utf-8"
             }
             
             response = self.client.post(
@@ -55,8 +58,11 @@ class BlockscoutAgent:
                 timeout=60.0
             )
             
+            print(f"📥 Blockscout MCP Response: {response.status_code}")
+            
             if response.status_code != 200:
                 print(f"❌ HTTP Error: {response.status_code}")
+                print(f"Response: {response.text[:500]}")
                 return {}
             
             # Parse SSE stream
@@ -91,12 +97,17 @@ class BlockscoutAgent:
         """
         lines = text.split('\n')
         result_data = None
+        last_result = None
         
         for line in lines:
             if line.startswith('data: '):
                 data_str = line[6:]  # Remove 'data: ' prefix
                 try:
                     data = json.loads(data_str)
+                    
+                    # Track the last complete result (with result field)
+                    if "result" in data:
+                        last_result = data
                     
                     # Look for result with content
                     if "result" in data and "content" in data["result"]:
@@ -110,6 +121,11 @@ class BlockscoutAgent:
                 except json.JSONDecodeError:
                     pass
         
+        # Return the result field from the last complete response
+        if last_result and "result" in last_result:
+            return last_result["result"]
+        
+        # Fallback to result_data if available
         if result_data and "result" in result_data:
             return result_data["result"]
         
@@ -180,7 +196,7 @@ class BlockscoutAgent:
         limit: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
-        Get transactions for an address
+        Get transactions for an address with pagination support
         
         Args:
             chain_id: Chain ID
@@ -195,30 +211,62 @@ class BlockscoutAgent:
             "address": address
         }
         
-        if limit:
-            params["limit"] = limit
+        # Blockscout MCP default limit is 20, but we can set it higher
+        params["limit"] = limit if limit else 50  # Default to 50 to get more data
         
         result = self._call_mcp("get_transactions_by_address", params)
+        
+        all_transactions = []
         
         if "content" in result and result["content"]:
             try:
                 content_text = result["content"][0]["text"]
                 content_data = json.loads(content_text)
                 
+                print(f"📊 Retrieved {len(content_data) if isinstance(content_data, list) else 'unknown'} transactions from Blockscout")
+                
                 # Handle both direct array and nested data structure
                 if isinstance(content_data, list):
-                    return content_data
-                elif isinstance(content_data, dict) and "data" in content_data:
-                    # MCP returns data nested in a "data" field
-                    data = content_data["data"]
-                    if isinstance(data, list):
-                        return data
-                    elif isinstance(data, dict) and "items" in data:
-                        return data["items"]
+                    all_transactions = content_data
+                elif isinstance(content_data, dict):
+                    # Check for pagination info
+                    if "data" in content_data:
+                        data = content_data["data"]
+                        if isinstance(data, list):
+                            all_transactions = data
+                        elif isinstance(data, dict) and "items" in data:
+                            all_transactions = data["items"]
+                    
+                    # Handle pagination - get more transactions if available
+                    if "pagination" in content_data and "next_call" in content_data["pagination"]:
+                        print(f"📄 Pagination detected, fetching more transactions...")
+                        next_call = content_data["pagination"]["next_call"]
+                        
+                        # Call paginated endpoint to get remaining transactions
+                        paginated_params = next_call.get("params", {})
+                        # Adjust limit for paginated call
+                        if limit and len(all_transactions) < limit:
+                            paginated_params["limit"] = limit - len(all_transactions)
+                        
+                        paginated_result = self._call_mcp(next_call["tool_name"], paginated_params)
+                        
+                        if "content" in paginated_result and paginated_result["content"]:
+                            paginated_text = paginated_result["content"][0]["text"]
+                            paginated_data = json.loads(paginated_text)
+                            
+                            if isinstance(paginated_data, list):
+                                all_transactions.extend(paginated_data)
+                            elif isinstance(paginated_data, dict) and "data" in paginated_data:
+                                data = paginated_data["data"]
+                                if isinstance(data, list):
+                                    all_transactions.extend(data)
+                        
+                        print(f"📊 Total transactions after pagination: {len(all_transactions)}")
                 
-                return []
+                return all_transactions
             except (json.JSONDecodeError, KeyError, TypeError) as e:
                 print(f"❌ Error parsing transactions: {e}")
+                print(f"Content text: {content_text[:200] if 'content_text' in locals() else 'N/A'}")
                 return []
         
         return []
@@ -245,8 +293,8 @@ class BlockscoutAgent:
             "address": address
         }
         
-        if limit:
-            params["limit"] = limit
+        # Blockscout MCP default limit is 20, but we can set it higher  
+        params["limit"] = limit if limit else 50  # Default to 50 to get more data
         
         result = self._call_mcp("get_token_transfers_by_address", params)
         

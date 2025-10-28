@@ -102,3 +102,4 @@ Coordinated specialized agents handle different tasks:
 **Built with ❤️ using Fetch.ai ASI1-Mini, Google Gemini, uAgents, and modern Web3 technologies**
 
 *Last updated: December 2024*
+

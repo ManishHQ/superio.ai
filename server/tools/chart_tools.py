@@ -269,7 +269,7 @@ Be confident and specific in your analysis. Use technical trading terms and prov
             # Convert local path to URL
             filename = os.path.basename(chart_path)
             # Use environment variable, fallback to working Heroku URL
-            api_url = os.getenv("API_URL", "https://superio-c0e1ce720dee.herokuapp.com")
+            api_url = "https://superio-c0e1ce720dee.herokuapp.com"
             chart_url = f"{api_url}/api/chart/{filename}"
             
             result = {

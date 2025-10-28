@@ -502,7 +502,7 @@ IMPORTANT:
                     traceback.print_exc()
                     
                     return {
-                        "response": f"⚠️ Failed to look up transaction. Error: {str(e)}\n\nThis could be because:\n1. The transaction hash is not on Ethereum Sepolia testnet\n2. The transaction doesn't exist\n3. There was a network error",
+                        "response": f"⚠️ Failed to load data from Blockscout MCP.\n\nError: {str(e)}\n\nThis could be because:\n1. The transaction hash is not on Ethereum Sepolia testnet\n2. The transaction doesn't exist\n3. Blockscout MCP API is unavailable or returned invalid data",
                         "tools_used": tools_used
                     }
                 finally:
@@ -739,7 +739,7 @@ IMPORTANT:
                     traceback.print_exc()
                     
                     return {
-                        "response": f"⚠️ Failed to analyze address. Error: {str(e)}",
+                        "response": f"⚠️ Failed to load data from Blockscout MCP.\n\nError: {str(e)}\n\nThe address information could not be retrieved. Please try again or check if the address is on Ethereum Sepolia testnet.",
                         "tools_used": tools_used
                     }
                 finally:
@@ -788,7 +788,7 @@ IMPORTANT:
                 except Exception as e:
                     print(f"❌ Error getting tokens: {e}")
                     return {
-                        "response": f"⚠️ Failed to get token holdings. Error: {str(e)}",
+                        "response": f"⚠️ Failed to load token data from Blockscout MCP.\n\nError: {str(e)}",
                         "tools_used": tools_used
                     }
                 finally:
@@ -836,7 +836,7 @@ IMPORTANT:
                 except Exception as e:
                     print(f"❌ Error getting transactions: {e}")
                     return {
-                        "response": f"⚠️ Failed to get transaction history. Error: {str(e)}",
+                        "response": f"⚠️ Failed to load transaction history from Blockscout MCP.\n\nError: {str(e)}",
                         "tools_used": tools_used
                     }
                 finally:

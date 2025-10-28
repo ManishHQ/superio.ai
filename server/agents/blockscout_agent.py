@@ -237,16 +237,19 @@ class BlockscoutAgent:
                         elif isinstance(data, dict) and "items" in data:
                             all_transactions = data["items"]
                     
-                    # Handle pagination - get more transactions if available
-                    if "pagination" in content_data and "next_call" in content_data["pagination"]:
-                        print(f"📄 Pagination detected, fetching more transactions...")
+                    # Handle pagination - fetch ALL pages until no more data
+                    max_pages = 10  # Safety limit to avoid infinite loops
+                    current_page = 1
+                    
+                    while "pagination" in content_data and "next_call" in content_data["pagination"] and current_page < max_pages:
+                        print(f"📄 Page {current_page}: Fetched {len(all_transactions)} transactions, fetching more...")
                         next_call = content_data["pagination"]["next_call"]
                         
                         # Call paginated endpoint to get remaining transactions
                         paginated_params = next_call.get("params", {})
                         # Adjust limit for paginated call
                         if limit and len(all_transactions) < limit:
-                            paginated_params["limit"] = limit - len(all_transactions)
+                            paginated_params["limit"] = min(50, limit - len(all_transactions))
                         
                         paginated_result = self._call_mcp(next_call["tool_name"], paginated_params)
                         
@@ -254,14 +257,27 @@ class BlockscoutAgent:
                             paginated_text = paginated_result["content"][0]["text"]
                             paginated_data = json.loads(paginated_text)
                             
+                            page_transactions = []
                             if isinstance(paginated_data, list):
-                                all_transactions.extend(paginated_data)
+                                page_transactions = paginated_data
                             elif isinstance(paginated_data, dict) and "data" in paginated_data:
                                 data = paginated_data["data"]
                                 if isinstance(data, list):
-                                    all_transactions.extend(data)
-                        
-                        print(f"📊 Total transactions after pagination: {len(all_transactions)}")
+                                    page_transactions = data
+                            
+                            if page_transactions:
+                                all_transactions.extend(page_transactions)
+                                print(f"📄 Page {current_page}: Got {len(page_transactions)} more transactions (total: {len(all_transactions)})")
+                                content_data = paginated_data  # Update for next iteration
+                                current_page += 1
+                            else:
+                                print(f"📄 No more transactions on page {current_page}")
+                                break
+                        else:
+                            print(f"📄 No response from page {current_page}")
+                            break
+                    
+                    print(f"✅ Final total: {len(all_transactions)} transactions")
                 
                 return all_transactions
             except (json.JSONDecodeError, KeyError, TypeError) as e:
